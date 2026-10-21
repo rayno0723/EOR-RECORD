@@ -89,16 +89,16 @@
             </div>
 
             <form id="setup-form" onsubmit="handleStartTournament(event)" class="space-y-5">
-                <!-- 網格排列：日期與地區 -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <!-- 日期 -->
-                    <div class="sm:col-span-1">
+                <!-- 網格排列：日期（精簡寬度）與地區（適度縮減且向右退避） -->
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 sm:gap-6">
+                    <!-- 日期：佔 2 欄，獨立固定寬度感 -->
+                    <div class="sm:col-span-2">
                         <label class="block text-sm font-semibold text-slate-700 mb-1.5">賽事日期</label>
                         <input type="date" id="match-date" required
                             class="w-full px-3 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
                     </div>
-                    <!-- 地區 -->
-                    <div class="sm:col-span-2">
+                    <!-- 地區：佔 3 欄，並補強左側離距防止與日期擠壓 -->
+                    <div class="sm:col-span-3">
                         <label class="block text-sm font-semibold text-slate-700 mb-1.5">地區 / 場館</label>
                         <input type="text" id="match-location" placeholder="例如：台北圓山 / 高雄展覽館" required
                             class="w-full px-3 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
@@ -216,7 +216,7 @@
                 </div>
             </div>
 
-            <!-- AI 賽事效率分析 Agent 區塊 (移至下方) -->
+            <!-- AI 賽事效率分析 Agent 區塊 (位於下方) -->
             <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl shadow-xl p-5 sm:p-8 border border-indigo-900/50 space-y-6">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-800/60 pb-4">
                     <div>
@@ -400,7 +400,7 @@
         // 生成分鐘選項 (00 - 59)
         function generateMinuteOptions(selectedVal) {
             let html = '<option value="">分</option>';
-            for (let i = 0; i < 60; i += 1) { // 可以改為 i+=5 或 1
+            for (let i = 0; i < 60; i += 1) {
                 const mStr = String(i).padStart(2, '0');
                 const sel = (selectedVal === mStr) ? 'selected' : '';
                 html += `<option value="${mStr}" ${sel}>${mStr}</option>`;
@@ -454,13 +454,9 @@
 
             tournamentData.roundRows.forEach((row, index) => {
                 // 計算各項時間差
-                // 1. 配對時間差 = 實際公布配對 - 預計公布配對
                 const pubDiff = calculateDiff(row.planPubH, row.planPubM, row.actPubH, row.actPubM);
-                // 2. 開賽時間差 = 實際開賽 - 預計開賽
                 const startDiff = calculateDiff(row.planStartH, row.planStartM, row.actStartH, row.actStartM);
-                // 3. 輪內時間差 = 完全結束 - 比賽時間到
                 const innerDiff = calculateDiff(row.timeDueH, row.timeDueM, row.completeH, row.completeM);
-                // 4. 與桌次時間差 = 預計輪次結束 - 完全結束
                 const deskDiff = calculateDiff(row.completeH, row.completeM, row.planEndH, row.planEndM);
 
                 const tr = document.createElement('tr');
@@ -555,7 +551,7 @@
         function updateCell(index, field, value) {
             tournamentData.roundRows[index][field] = value;
             saveToLocalStorage();
-            renderTable(); // 重新整理畫面以即時計算時間差
+            renderTable();
         }
 
         function fillCurrentTimeAll() {
@@ -658,12 +654,10 @@
             const apiKey = localStorage.getItem(API_KEY_STORAGE);
 
             if (!apiKey) {
-                // 執行離線智慧規則診斷引擎
                 setTimeout(() => {
                     generateOfflineAiReport(contentEl, badgeEl);
                 }, 600);
             } else {
-                // 調用 Gemini API 進行深度雲端分析
                 try {
                     await callGeminiApiAgent(apiKey, contentEl, badgeEl);
                 } catch (err) {
