@@ -244,7 +244,7 @@
             <!-- 時間表主要表格 -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
-                    <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1280px]">
+                    <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1360px]">
                         <thead class="text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
                             <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
                                 <th scope="col" class="py-3 px-3 w-16 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
@@ -280,15 +280,15 @@
                                 <th class="py-2.5 px-2 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
                                 
                                 <th class="py-2.5 px-2 bg-blue-950/40 w-44">預計公布配對</th>
-                                <th class="py-2.5 px-2 bg-blue-950/40 w-44">實際公布配對</th>
+                                <th class="py-2.5 px-2 bg-blue-950/40 w-48">實際公布配對</th>
                                 <th class="py-2.5 px-2 bg-blue-900/60 w-32 text-blue-200">配對時間差</th>
 
                                 <th class="py-2.5 px-2 bg-emerald-950/40 w-44">預計開賽</th>
-                                <th class="py-2.5 px-2 bg-emerald-950/40 w-44">實際開賽</th>
+                                <th class="py-2.5 px-2 bg-emerald-950/40 w-48">實際開賽</th>
                                 <th class="py-2.5 px-2 bg-emerald-900/60 w-32 text-emerald-200">開賽時間差</th>
 
                                 <th class="py-2.5 px-2 bg-purple-950/40 w-44">預計輪次結束</th>
-                                <th class="py-2.5 px-2 bg-purple-950/40 w-44">最後成績回報</th>
+                                <th class="py-2.5 px-2 bg-purple-950/40 w-48">最後成績回報</th>
                                 <th class="py-2.5 px-2 bg-purple-900/60 w-32 text-purple-200">輪內時間差</th>
 
                                 <th class="py-2.5 px-2 bg-amber-950/40 w-44">比賽時間到</th>
@@ -377,7 +377,7 @@
             const type = selectEl.value;
             if (!type) return;
             clearSectionData(type);
-            selectEl.selectedIndex = 0; // 重置下拉選單
+            selectEl.selectedIndex = 0;
         }
 
         // 執行分區清除核心邏輯
@@ -489,21 +489,41 @@
             return null;
         }
 
-        // ---------- 雙模態輸入框 ----------
-        function buildTimeInputHTML(roundIndex, fieldName, value) {
+        // ---------- ⏱️ 雙模態輸入框 (可控制是否顯示 NOW 按鈕) ----------
+        function buildTimeInputHTML(roundIndex, fieldName, value, showNowButton = false) {
             let [h, m] = value ? value.split(':') : ['', ''];
             
             return `
-                <div class="flex items-center justify-center gap-1.5">
+                <div class="flex items-center justify-center gap-1">
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-hours" maxlength="2" placeholder="時" value="${h}"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'h')"
-                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
-                    <span class="text-slate-400 font-bold text-base md:text-lg">:</span>
+                           class="w-12 bg-white border border-slate-300 rounded-lg px-1.5 py-1 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                    <span class="text-slate-400 font-bold text-sm md:text-base">:</span>
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-mins" maxlength="2" placeholder="分" value="${m}"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'm')"
-                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                           class="w-12 bg-white border border-slate-300 rounded-lg px-1.5 py-1 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                    
+                    ${showNowButton ? `
+                        <button type="button" onclick="fillNowTime(${roundIndex}, '${fieldName}')" 
+                                title="填入現在時間"
+                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-xs px-1.5 py-1 rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95">
+                            NOW
+                        </button>
+                    ` : ''}
                 </div>
             `;
+        }
+
+        // ⏱️ 填入現在時間的專用邏輯
+        function fillNowTime(roundIndex, fieldName) {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            
+            currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
+            saveCurrentData();
+            renderTable();
+            showToast(`已填入現在時間 (${h}:${m})`);
         }
 
         function handleTimeBlur(inputEl, roundIndex, fieldName, type) {
@@ -705,19 +725,19 @@
                     <td class="py-3 px-2 font-extrabold text-base md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
                         R${row.roundNum}
                     </td>
-                    <!-- 區塊 1：配對區 (藍) -->
-                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'p_announce', row.p_announce)}</td>
-                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'a_announce', row.a_announce)}</td>
+                    <!-- 區塊 1：配對區 (預計不用 NOW, 實際要 NOW) -->
+                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
+                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
                     <td class="py-2.5 px-2 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
-                    <!-- 區塊 2：開賽區 (綠) -->
-                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'p_start', row.p_start)}</td>
-                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'a_start', row.a_start)}</td>
+                    <!-- 區塊 2：開賽區 (預計不用 NOW, 實際要 NOW) -->
+                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
+                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
                     <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
-                    <!-- 區塊 3：比賽與結束區 (紫) -->
-                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end)}</td>
-                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'all_clear', row.all_clear)}</td>
+                    <!-- 區塊 3：比賽與結束區 (預計不用 NOW, 實際/最後成績回報要 NOW) -->
+                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
+                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
                     <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
                     <!-- 區塊 4：桌次區 (黃) -->
