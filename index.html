@@ -2,10 +2,10 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>賽事輪次時間紀錄與效率檢核工具 (含 AI 效率診斷 Agent)</title>
-
-    <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>賽事輪次時間紀錄與效率檢核工具</title>
+    
+    <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 (當透過主畫面捷徑開啟時自動生效) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="賽事計時器">
@@ -16,836 +16,617 @@
     <meta http-equiv="Expires" content="0">
 
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome 圖示 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        poke: {
-                            great: '#2563eb',
-                            ultra: '#d97706',
-                            premier: '#dc2626',
-                            master: '#7c3aed'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        /* 徹底移除原生下拉選單箭頭，確保數字完全不被遮擋 */
+        /* 移除原生 select 箭頭並設定自訂樣式，防止字體被箭頭擋住 */
         .custom-select {
+            appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
-            appearance: none;
-            background-image: none !important;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            background-size: 14px;
+            padding-right: 26px !important;
         }
 
-        /* 隱藏滾動條但保持可滑動 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Sticky Header and Sticky Left Column */
+        /* 凍結表格第一欄 (輪次) */
         .sticky-col {
             position: sticky;
             left: 0;
             z-index: 20;
+            background-color: white;
         }
         
-        .sticky-col-header {
+        /* 凍結表頭 */
+        .sticky-header {
             position: sticky;
-            left: 0;
-            z-index: 40;
+            top: 0;
+            z-index: 30;
         }
 
-        .select-box-wrapper {
-            transition: all 0.15s ease-in-out;
+        /* 自訂美化橫向捲軸 */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
         }
-        .select-box-wrapper:focus-within {
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
         }
-
-        /* Markdown 解析樣式微調 */
-        .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
-        .prose ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
-        .prose h3 { font-weight: 800; font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col text-base antialiased selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- 頂部 Header -->
-    <header class="bg-slate-900 text-white shadow-lg border-b border-slate-800 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white p-2.5 rounded-2xl shadow-md shrink-0 flex items-center justify-center">
-                    <i class="fa-solid fa-wand-magic-sparkles text-xl md:text-2xl animate-pulse"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl md:text-2xl font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-300">
-                        賽事時間效率檢核系統
-                    </h1>
-                    <p class="text-xs md:text-sm text-slate-400 font-medium flex items-center gap-2">
-                        <span>離線本機數據儲存</span>
-                        <span class="text-slate-600">•</span>
-                        <span class="text-indigo-300 flex items-center gap-1">
-                            <i class="fa-solid fa-robot"></i> 嵌入式 AI Agent
-                        </span>
-                    </p>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <button onclick="openApiKeyModal()" class="text-xs md:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl border border-slate-700/80 transition-all flex items-center gap-1.5">
-                    <i class="fa-solid fa-key text-amber-400"></i>
-                    <span id="apiKeyBtnText">設定 API Key</span>
+    <!-- 頂部標題導覽 -->
+    <header class="bg-indigo-600 text-white shadow-md py-4 px-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl sm:text-2xl font-bold tracking-wide flex items-center gap-2">
+                ⏱️ 賽事運作時間檢核工具
+            </h1>
+            <div id="header-actions" class="hidden flex gap-2">
+                <button onclick="switchLayer(1)" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1 border border-indigo-500">
+                    ⚙️ 重新設定
                 </button>
-                <div id="statusBadge" class="hidden sm:flex items-center gap-2 text-xs md:text-sm bg-slate-800/80 text-emerald-400 px-3.5 py-2 rounded-full border border-slate-700/60 backdrop-blur">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>自動儲存中</span>
-                </div>
             </div>
         </div>
     </header>
 
-    <!-- 主要內容區 -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-6">
+    <!-- 主容器 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-3 sm:p-6">
 
         <!-- ==================== 第一層：賽事設定頁面 ==================== -->
-        <section id="step1Page" class="space-y-6">
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 md:p-8">
-                <div class="border-b border-slate-100 pb-4 mb-6 flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2.5">
-                            <i class="fa-solid fa-sliders text-indigo-600"></i> 新增 / 設定賽事
-                        </h2>
-                        <p class="text-sm md:text-base text-slate-500 mt-1">請填寫賽事基礎設定，系統將建立專屬的時間檢核工作表</p>
+        <section id="layer-1" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-slate-100">
+            <div class="mb-6 border-b border-slate-100 pb-4">
+                <h2 class="text-xl font-bold text-slate-800">賽事基本設定</h2>
+                <p class="text-sm text-slate-500 mt-1">請填寫本次賽事的各項基本參數以建立計時與檢核表。</p>
+            </div>
+
+            <form id="setup-form" onsubmit="handleStartTournament(event)" class="space-y-5">
+                <!-- 網格排列：日期與地區 -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- 日期 -->
+                    <div class="sm:col-span-1">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">賽事日期</label>
+                        <input type="date" id="match-date" required
+                            class="w-full px-3 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
+                    </div>
+                    <!-- 地區 -->
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">地區 / 場館</label>
+                        <input type="text" id="match-location" placeholder="例如：台北圓山 / 高雄展覽館" required
+                            class="w-full px-3 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
                     </div>
                 </div>
 
-                <form id="configForm" onsubmit="event.preventDefault(); startTournament();" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-                    <!-- 1. 日期 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-sm font-bold text-slate-700">1. 日期</label>
-                        <input type="date" id="inputDate" required
-                            class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all">
-                    </div>
+                <!-- 賽事種類 -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1.5">賽事種類</label>
+                    <select id="match-type" required
+                        class="w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50 custom-select">
+                        <option value="" disabled selected>請選擇賽事種類</option>
+                        <option value="超級球">超級球</option>
+                        <option value="高級球">高級球</option>
+                        <option value="紀念球">紀念球</option>
+                        <option value="大師球">大師球</option>
+                    </select>
+                </div>
 
-                    <!-- 2. 地區 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-sm font-bold text-slate-700">2. 地區</label>
-                        <input type="text" id="inputRegion" placeholder="例如：台北 / 高雄" required
-                            class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all">
-                    </div>
-
-                    <!-- 3. 賽事種類 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-sm font-bold text-slate-700">3. 賽事種類</label>
-                        <div class="relative">
-                            <select id="inputType" required class="custom-select w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all pr-10">
-                                <option value="超級球">超級球 (Great Ball)</option>
-                                <option value="高級球">高級球 (Ultra Ball)</option>
-                                <option value="紀念球">紀念球 (Premier Ball)</option>
-                                <option value="大師球">大師球 (Master Ball)</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
-                                <i class="fa-solid fa-chevron-down text-sm"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. 總輪次數 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-sm font-bold text-slate-700">4. 總輪次數</label>
-                        <input type="number" id="inputRounds" min="1" max="20" value="6" required
-                            class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all">
-                    </div>
-
-                    <!-- 5. 組別 -->
-                    <div class="space-y-1.5">
-                        <label class="block text-sm font-bold text-slate-700">5. 組別</label>
-                        <div class="relative">
-                            <select id="inputCategory" required class="custom-select w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-base font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition-all pr-10">
-                                <option value="大師組">大師組 (Master)</option>
-                                <option value="少年組">少年組 (Senior)</option>
-                                <option value="孩童組">孩童組 (Junior)</option>
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
-                                <i class="fa-solid fa-chevron-down text-sm"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 送出按鈕 -->
-                    <div class="sm:col-span-2 lg:col-span-5 pt-3 flex justify-end">
-                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-lg px-8 py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-200">
-                            <i class="fa-solid fa-table-cells text-xl"></i> 建立並開始時間檢核
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- 歷史紀錄管理 -->
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200/80 p-5 md:p-8">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-5 gap-3">
+                <!-- 總輪次數與組別 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <h3 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-box-archive text-slate-500"></i> 本機歷史賽事紀錄
-                        </h3>
-                        <p class="text-xs md:text-sm text-slate-500 mt-0.5">點擊卡片可隨時載入進行檢視、修改或 AI 分析</p>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">總輪次數 (R)</label>
+                        <input type="number" id="match-rounds" min="1" max="12" value="4" required
+                            class="w-full px-3 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50">
                     </div>
-                    <button onclick="clearAllHistory()" class="text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl transition-all font-semibold flex items-center gap-1.5">
-                        <i class="fa-solid fa-trash-can"></i> 清除所有歷史
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">組別</label>
+                        <select id="match-division" required
+                            class="w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-slate-50 custom-select">
+                            <option value="" disabled selected>請選擇組別</option>
+                            <option value="大師組">大師組</option>
+                            <option value="少年組">少年組</option>
+                            <option value="孩童組">孩童組</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 送出按鈕 -->
+                <div class="pt-4">
+                    <button type="submit"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-200 text-base flex items-center justify-center gap-2">
+                        🚀 建立時間表並開始計時檢核
                     </button>
                 </div>
-
-                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- 動態生成歷史紀錄卡片 -->
-                </div>
-            </div>
+            </form>
         </section>
 
-        <!-- ==================== 第二層：輪次時間表頁面 ==================== -->
-        <section id="step2Page" class="space-y-5 hidden">
-            <!-- 賽事頂部摘要列 -->
-            <div class="bg-white rounded-3xl shadow-sm p-4 sm:p-6 border border-slate-200/80 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div class="space-y-2 w-full lg:w-auto">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span id="badgeType" class="px-3.5 py-1 rounded-full text-xs md:text-sm font-extrabold text-white bg-slate-800 shadow-sm">--</span>
-                        <span id="badgeCategory" class="px-3.5 py-1 rounded-full text-xs md:text-sm font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
-                        <span id="badgeDate" class="text-xs md:text-sm text-slate-500 flex items-center gap-1.5 ml-1 font-medium">
-                            <i class="fa-regular fa-calendar-check text-indigo-500"></i> <span id="displayDate">--</span>
-                        </span>
-                    </div>
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-2.5 flex-wrap">
-                        <span id="displayRegion">--</span> 賽事時間效率明細表
-                        <span class="text-base font-bold text-slate-500">( 共 <span id="displayRounds">0</span> 輪 )</span>
-                    </h2>
+        <!-- ==================== 第二層：時間表與檢核頁面 ==================== -->
+        <section id="layer-2" class="hidden space-y-6">
+            
+            <!-- 資訊與控制面板卡片 -->
+            <div class="bg-white rounded-2xl shadow-md p-4 sm:p-6 border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div id="summary-info" class="flex flex-wrap items-center gap-3 text-sm sm:text-base font-medium text-slate-700">
+                    <!-- 動態填入設定資訊 -->
                 </div>
-
-                <!-- 工具按鈕區 -->
-                <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-stretch sm:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
-                    <button onclick="switchToStep1()" class="flex-1 sm:flex-initial bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-slate-300">
-                        <i class="fa-solid fa-chevron-left"></i> 返回設定
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                    <button onclick="fillCurrentTimeAll()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-1 shadow-sm">
+                        ⚡ 一鍵填入現在時間
                     </button>
-                    <button onclick="exportJSON()" class="flex-1 sm:flex-initial bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-slate-300">
-                        <i class="fa-solid fa-code"></i> JSON
+                    <button onclick="exportData('json')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-1">
+                        📥 匯出 JSON
                     </button>
-                    <button onclick="exportCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-5 py-2.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-100">
-                        <i class="fa-solid fa-file-excel text-base"></i> 匯出 CSV 報表
+                    <button onclick="exportData('csv')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-1">
+                        📊 匯出 CSV
+                    </button>
+                    <button onclick="clearLocalStorageData()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition">
+                        🗑️ 清除重設
                     </button>
                 </div>
             </div>
 
-            <!-- 🤖 AI 賽事效率分析 Agent 功能卡片區塊 -->
-            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 rounded-3xl p-5 md:p-6 text-white shadow-xl border border-indigo-500/30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden">
-                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                
-                <div class="space-y-2 relative z-10 max-w-2xl">
-                    <div class="flex items-center gap-2.5">
-                        <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
-                            <i class="fa-solid fa-microchip"></i> Analytics Module
-                        </span>
-                        <span id="agentModeBadge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold">
-                            離線規則引擎模式
-                        </span>
-                    </div>
-                    <h3 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                        <span>AI 賽事效率診斷 Agent</span>
-                    </h3>
-                    <p class="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-                        自動分析各輪次配對延遲、死鬥拖拖耗時與桌次清理效率。無 API Key 時自動執行離線規則引擎診斷；輸入 API Key 即刻解鎖 Gemini 智慧深度歸因與改善對話！
-                    </p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row items-center gap-3 relative z-10 shrink-0">
-                    <button onclick="runAiAnalysis()" class="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-2.5 transition-all text-base hover:scale-102 active:scale-98">
-                        <i class="fa-solid fa-brain text-xl text-indigo-200"></i>
-                        <span>執行 AI 賽事效率診斷</span>
-                    </button>
-                </div>
+            <!-- 橫向滾動提示條 -->
+            <div class="flex items-center justify-between bg-indigo-50 border border-indigo-100 text-indigo-800 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium shadow-sm">
+                <span class="flex items-center gap-1.5">💡 提示：表格內容較寬，可左右滑動查看完整配對與時間差資訊 ➔</span>
+                <span class="text-indigo-500 font-bold hidden sm:inline">動態即時計算中</span>
             </div>
 
-            <!-- 時間表主要表格 -->
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden relative">
-                
-                <!-- 行動裝置提示列 -->
-                <div class="block lg:hidden bg-indigo-50 text-indigo-700 text-xs px-4 py-2 border-b border-indigo-100 font-semibold flex items-center justify-between">
-                    <span><i class="fa-solid fa-arrows-left-right mr-1.5"></i> 左右滑動檢視完整表格（第一直行 R1~R6 已固定）</span>
-                </div>
-
-                <div class="overflow-x-auto max-h-[calc(100vh-230px)] no-scrollbar touch-pan-x">
-                    <table class="w-full text-base text-left border-collapse min-w-[1380px]">
-                        <!-- 表頭 Header -->
-                        <thead class="text-sm font-black uppercase bg-slate-900 text-white sticky top-0 z-30 shadow-md">
-                            <!-- 第一層：大分區標題 -->
-                            <tr class="divide-x divide-slate-800 border-b border-slate-800 text-center">
-                                <th scope="col" class="py-3.5 px-3 w-20 md:w-24 bg-slate-900 sticky-col-header top-0 border-r border-slate-800 text-base">
-                                    輪次
-                                </th>
-                                <th scope="col" colspan="3" class="py-3.5 px-2 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
-                                    <div class="flex items-center justify-center gap-1.5 text-base">
-                                        <i class="fa-solid fa-bullhorn text-blue-300"></i>
-                                        <span>配對區（公布時間檢核）</span>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="3" class="py-3.5 px-2 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
-                                    <div class="flex items-center justify-center gap-1.5 text-base">
-                                        <i class="fa-solid fa-flag-checkered text-emerald-300"></i>
-                                        <span>開賽區（開賽對時）</span>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="3" class="py-3.5 px-2 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
-                                    <div class="flex items-center justify-center gap-1.5 text-base">
-                                        <i class="fa-solid fa-hourglass-end text-purple-300"></i>
-                                        <span>比賽與結束區（輪內耗時）</span>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="2" class="py-3.5 px-2 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
-                                    <div class="flex items-center justify-center gap-1.5 text-base">
-                                        <i class="fa-solid fa-chair text-amber-300"></i>
-                                        <span>賽程進度/桌次區</span>
-                                    </div>
-                                </th>
+            <!-- 表格容器 -->
+            <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar max-h-[70vh]">
+                    <table id="rounds-table" class="w-full text-left border-collapse text-sm sm:text-base whitespace-nowrap">
+                        <thead>
+                            <!-- 雙層表頭：第一層分類與色彩區塊 -->
+                            <tr class="bg-slate-900 text-white text-xs sm:text-sm sticky-header">
+                                <th rowspan="2" class="py-3 px-3 border-r border-slate-700 text-center sticky-col bg-slate-900 min-w-[70px]">輪次</th>
+                                <th colspan="3" class="py-2 px-2 text-center border-r border-slate-700 bg-blue-900/90 text-blue-100 font-semibold">🔵 配對區</th>
+                                <th colspan="3" class="py-2 px-2 text-center border-r border-slate-700 bg-emerald-900/90 text-emerald-100 font-semibold">🟢 開賽區</th>
+                                <th colspan="3" class="py-2 px-2 text-center border-r border-slate-700 bg-purple-900/90 text-purple-100 font-semibold">🟣 比賽與結束區</th>
+                                <th colspan="2" class="py-2 px-2 text-center bg-amber-900/90 text-amber-100 font-semibold">🟠 賽程進度/桌次區</th>
                             </tr>
-
-                            <!-- 第二層：各項詳細名稱 -->
-                            <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200 text-xs md:text-sm">
-                                <th class="py-2.5 px-2 sticky-col-header bg-slate-800 border-r border-slate-700">輪別</th>
-                                
-                                <!-- 區塊 1：配對區 -->
-                                <th class="py-2.5 px-2 bg-blue-950/50 w-44">預計公布配對</th>
-                                <th class="py-2.5 px-2 bg-blue-950/50 w-44">實際公布配對</th>
-                                <th class="py-2.5 px-2 bg-blue-900/70 w-32 text-blue-200 font-bold">配對時間差</th>
-
-                                <!-- 區塊 2：開賽區 -->
-                                <th class="py-2.5 px-2 bg-emerald-950/50 w-44">預計開賽</th>
-                                <th class="py-2.5 px-2 bg-emerald-950/50 w-44">實際開賽</th>
-                                <th class="py-2.5 px-2 bg-emerald-900/70 w-32 text-emerald-200 font-bold">開賽時間差</th>
-
-                                <!-- 區塊 3：比賽區 -->
-                                <th class="py-2.5 px-2 bg-purple-950/50 w-44">比賽時間到</th>
-                                <th class="py-2.5 px-2 bg-purple-950/50 w-44">完全結束</th>
-                                <th class="py-2.5 px-2 bg-purple-900/70 w-32 text-purple-200 font-bold">輪內時間差</th>
-
-                                <!-- 區塊 4：桌次區 -->
-                                <th class="py-2.5 px-2 bg-amber-950/50 w-44">預計輪次結束</th>
-                                <th class="py-2.5 px-2 bg-amber-900/70 w-36 text-amber-200 font-bold">與桌次時間差</th>
+                            <!-- 第二層細分欄位 -->
+                            <tr class="bg-slate-800 text-slate-200 text-xs sm:text-sm sticky-header top-[37px] sm:top-[41px]">
+                                <!-- 藍色配對區 -->
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-blue-900/80">預計公布配對</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-blue-900/80">實際公布配對</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-blue-900/80 text-center">配對時間差</th>
+                                <!-- 綠色開賽區 -->
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-emerald-900/80">預計開賽</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-emerald-900/80">實際開賽</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-emerald-900/80 text-center">開賽時間差</th>
+                                <!-- 紫色比賽與結束區 -->
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-purple-900/80">比賽時間到</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-purple-900/80">完全結束</th>
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-purple-900/80 text-center">輪內時間差</th>
+                                <!-- 琥珀色桌次區 -->
+                                <th class="py-2.5 px-3 border-r border-slate-700 bg-amber-900/80">預計輪次結束</th>
+                                <th class="py-2.5 px-3 bg-amber-900/80 text-center">與桌次時間差</th>
                             </tr>
                         </thead>
-
-                        <!-- 表格資料區 Body -->
-                        <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
-                            <!-- 動態渲染各輪次 -->
+                        <tbody id="rounds-tbody" class="divide-y divide-slate-200 text-slate-700 font-medium">
+                            <!-- 動態生成輪次列 -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 計算公式與邏輯圖例說明卡片 -->
-            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm text-xs sm:text-sm text-slate-600 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="p-3.5 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-1">
-                    <div class="flex items-center gap-2 font-bold text-blue-900 text-sm">
-                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                        <span>配對時間差</span>
+            <!-- AI 賽事效率分析 Agent 區塊 (移至下方) -->
+            <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl shadow-xl p-5 sm:p-8 border border-indigo-900/50 space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-indigo-800/60 pb-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">🤖</span>
+                            <h3 class="text-lg sm:text-xl font-bold tracking-wide">AI 賽事效率分析 Agent</h3>
+                        </div>
+                        <p class="text-xs sm:text-sm text-indigo-200 mt-1">智慧診斷輪次間的時間延誤、連鎖雪球效應與低效瓶頸。</p>
                     </div>
-                    <p class="text-slate-700 font-mono">實際公布 - 預計公布</p>
-                    <p class="text-slate-400 text-xs">正值代表比預計時間延遲公布配對</p>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openApiKeyModal()" class="bg-indigo-800 hover:bg-indigo-700 text-indigo-100 border border-indigo-600/50 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                            🔑 設定 Gemini API Key
+                        </button>
+                        <button onclick="runAiAgentAnalysis()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-md flex items-center gap-1.5">
+                            ⚡ 執行效率診斷
+                        </button>
+                    </div>
                 </div>
 
-                <div class="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-100 space-y-1">
-                    <div class="flex items-center gap-2 font-bold text-emerald-900 text-sm">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        <span>開賽時間差</span>
+                <!-- 分析結果容器 -->
+                <div id="ai-agent-result-container" class="hidden bg-slate-900/90 rounded-xl p-5 border border-indigo-800/80 space-y-4">
+                    <div class="flex justify-between items-center border-b border-indigo-900 pb-3">
+                        <span class="text-sm font-bold text-emerald-400 flex items-center gap-1.5" id="ai-engine-badge">
+                            ✨ AI 診斷報告就緒
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportAiReport()" class="text-xs bg-indigo-900 hover:bg-indigo-800 text-indigo-200 px-3 py-1.5 rounded-lg transition">📥 匯出報告</button>
+                            <button onclick="closeAiResult()" class="text-xs text-slate-400 hover:text-white px-2 py-1">✕ 關閉</button>
+                        </div>
                     </div>
-                    <p class="text-slate-700 font-mono">實際開賽 - 預計開賽</p>
-                    <p class="text-slate-400 text-xs">正值代表開賽時間發生延誤</p>
-                </div>
-
-                <div class="p-3.5 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-1">
-                    <div class="flex items-center gap-2 font-bold text-purple-900 text-sm">
-                        <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                        <span>輪內時間差</span>
+                    <div id="ai-agent-content" class="text-sm sm:text-base leading-relaxed text-slate-200 space-y-3 font-normal">
+                        <!-- 動態 AI 分析報告內容 -->
                     </div>
-                    <p class="text-slate-700 font-mono">完全結束 - 比賽時間到</p>
-                    <p class="text-slate-400 text-xs">計算正式比賽時間截止後的死鬥/死局耗時</p>
-                </div>
-
-                <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-100 space-y-1">
-                    <div class="flex items-center gap-2 font-bold text-amber-900 text-sm">
-                        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                        <span>與桌次時間差</span>
-                    </div>
-                    <p class="text-slate-700 font-mono">預計輪次結束 - 完全結束</p>
-                    <p class="text-slate-400 text-xs">正值表示比預期提早清空所有桌次</p>
                 </div>
             </div>
+
         </section>
 
     </main>
 
-    <!-- ==================== Modals 彈窗區 ==================== -->
-
     <!-- API Key 設定 Modal -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 space-y-5">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-key text-amber-500"></i> 設定 Gemini API Key
-                </h3>
-                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                輸入 Gemini API Key 後可解鎖高階 LLM 賽事深度分析、瓶頸連鎖反應歸因與裁判人力調配對話建議。鑰匙將安全存於您的瀏覽器 LocalStorage 中。
-            </p>
-
-            <div class="space-y-1.5">
-                <label class="block text-xs font-bold text-slate-700">API Key</label>
-                <input type="password" id="apiKeyInput" placeholder="AIzaSy..." 
-                    class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-
-            <div class="flex items-center justify-between gap-3 pt-2">
-                <button onclick="removeApiKey()" class="text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl font-bold">
-                    清除密鑰 (恢復離線模式)
-                </button>
-                <button onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-md">
-                    儲存 Key
-                </button>
+    <div id="apiKeyModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-slate-800">
+            <h3 class="text-lg font-bold">設定 Gemini API Key (選填)</h3>
+            <p class="text-xs text-slate-500">不填寫時系統將自動啟動內建「離線規則診斷引擎」；若填入 Gemini API Key 則可啟用雲端 LLM 深度智慧分析與對話功能。</p>
+            <input type="password" id="apiKeyInput" placeholder="請輸入您的 Gemini API Key (AIzaSy...)" 
+                class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 font-mono">
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeApiKeyModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
+                <button onclick="saveApiKey()" class="px-5 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow transition">儲存金鑰</button>
             </div>
         </div>
     </div>
 
-    <!-- AI 分析診斷與對話 Modal -->
-    <div id="aiModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <!-- Modal 表頭 -->
-            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
-                <div class="flex items-center gap-3">
-                    <div class="bg-indigo-600 p-2 rounded-xl text-white">
-                        <i class="fa-solid fa-brain text-xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg md:text-xl font-black flex items-center gap-2">
-                            <span>賽事運作效率 AI 診斷報告</span>
-                        </h3>
-                        <p id="aiModalSubtitle" class="text-xs text-slate-400">離線規則引擎自動分析中...</p>
-                    </div>
-                </div>
+    <!-- 頁尾 -->
+    <footer class="text-center py-6 text-xs text-slate-400">
+        賽事輪次時間紀錄與效率檢核工具 &copy; 2026 (LocalStorage 離線支援)
+    </footer>
 
-                <div class="flex items-center gap-2">
-                    <button onclick="exportAiReport()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl border border-slate-700 font-bold flex items-center gap-1.5">
-                        <i class="fa-solid fa-download"></i> 匯出報告
-                    </button>
-                    <button onclick="closeAiModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Modal 內容 (可滾動區) -->
-            <div class="flex-grow overflow-y-auto p-5 sm:p-6 space-y-6 no-scrollbar">
-                <!-- 讀取 Loading 畫面 -->
-                <div id="aiLoading" class="py-12 flex flex-col items-center justify-center space-y-4">
-                    <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <p class="text-slate-600 font-bold text-sm sm:text-base animate-pulse">AI Agent 正在精算各輪次數據並推演低效成因...</p>
-                </div>
-
-                <!-- 診斷報告展現區 -->
-                <div id="aiReportContainer" class="space-y-6 hidden">
-                    <!-- 健康度總評與核心數據 -->
-                    <div id="aiSummaryHeader" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <!-- 動態內容 -->
-                    </div>
-
-                    <!-- 診斷詳情 Markdown/HTML 渲染區 -->
-                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-slate-800 prose max-w-none text-sm md:text-base" id="aiReportText">
-                        <!-- 動態報告內容 -->
-                    </div>
-
-                    <!-- 互動對話問答區 (僅在 Gemini LLM 模式啟用) -->
-                    <div id="aiChatSection" class="border-t border-slate-200 pt-5 space-y-3 hidden">
-                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                            <i class="fa-solid fa-comments text-indigo-600"></i> 與 Gemini AI 顧問方針研討
-                        </h4>
-                        <div id="chatHistory" class="space-y-2.5 max-h-48 overflow-y-auto p-3 bg-slate-100 rounded-2xl text-xs sm:text-sm">
-                            <div class="text-slate-500 italic">對話已建立，您可以針對當前賽事瓶頸追問（例如：「如何改善 R3 拖桌擠壓情況？」）</div>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="userQueryInput" placeholder="請輸入對賽事數據的疑問..." 
-                                class="flex-grow bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <button onclick="sendUserQuery()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shrink-0">
-                                發送
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast 提示訊息彈窗 -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white text-sm md:text-base px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-3">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
-        <span id="toastMsg" class="font-medium">提示訊息</span>
-    </div>
-
-    <!-- JavaScript 核心邏輯 -->
+    <!-- JavaScript 邏輯 -->
     <script>
-        const STORAGE_KEY = 'TOURNAMENT_TIMER_DATA_V2';
-        const API_KEY_STORAGE = 'GEMINI_API_KEY_TIMER';
-        
-        let currentData = {
-            id: null,
-            config: {
-                date: new Date().toISOString().split('T')[0],
-                region: '',
-                type: '超級球',
-                rounds: 6,
-                category: '大師組'
-            },
-            roundsData: []
+        // 資料結構與全域變數
+        let tournamentData = {
+            date: '',
+            location: '',
+            matchType: '',
+            rounds: 4,
+            division: '',
+            roundRows: []
         };
 
-        let lastAiReportText = "";
+        const STORAGE_KEY = 'pokemon_match_timer_data_v2';
+        const API_KEY_STORAGE = 'gemini_api_key_v1';
 
-        window.onload = function() {
-            document.getElementById('inputDate').value = currentData.config.date;
-            renderHistoryList();
-            updateApiKeyUI();
-        };
-
-        // 建立時間選取下拉選單
-        function buildTimePickerHTML(roundIndex, fieldName, value) {
-            let selectedH = '';
-            let selectedM = '';
-            
-            if (value && value.includes(':')) {
-                const parts = value.split(':');
-                selectedH = parts[0];
-                selectedM = parts[1];
-            }
-
-            let hourOptions = `<option value="">時</option>`;
-            for (let h = 0; h < 24; h++) {
-                const hh = String(h).padStart(2, '0');
-                hourOptions += `<option value="${hh}" ${selectedH === hh ? 'selected' : ''}>${hh}</option>`;
-            }
-
-            let minOptions = `<option value="">分</option>`;
-            for (let m = 0; m < 60; m++) {
-                const mm = String(m).padStart(2, '0');
-                minOptions += `<option value="${mm}" ${selectedM === mm ? 'selected' : ''}>${mm}</option>`;
-            }
-
-            return `
-                <div class="flex items-center justify-center gap-1 w-full max-w-[160px] mx-auto">
-                    <div class="relative flex-1 select-box-wrapper bg-slate-50 border border-slate-300 rounded-xl overflow-hidden">
-                        <select onchange="onTimeChange(${roundIndex}, '${fieldName}', 'h', this.value)" 
-                                class="custom-select w-full bg-transparent py-2 pl-2.5 pr-5 text-base font-black text-slate-800 text-center font-mono cursor-pointer focus:outline-none min-h-[44px]">
-                            ${hourOptions}
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-1 flex items-center pr-1 text-slate-400">
-                            <i class="fa-solid fa-caret-down text-xs"></i>
-                        </div>
-                    </div>
-
-                    <span class="text-slate-400 font-extrabold text-lg px-0.5">:</span>
-
-                    <div class="relative flex-1 select-box-wrapper bg-slate-50 border border-slate-300 rounded-xl overflow-hidden">
-                        <select onchange="onTimeChange(${roundIndex}, '${fieldName}', 'm', this.value)" 
-                                class="custom-select w-full bg-transparent py-2 pl-2.5 pr-5 text-base font-black text-slate-800 text-center font-mono cursor-pointer focus:outline-none min-h-[44px]">
-                            ${minOptions}
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-1 flex items-center pr-1 text-slate-400">
-                            <i class="fa-solid fa-caret-down text-xs"></i>
-                        </div>
-                    </div>
-
-                    ${fieldName.startsWith('a_') || fieldName === 'all_clear' ? `
-                        <button onclick="setCurrentTime(${roundIndex}, '${fieldName}')" 
-                                title="填入當前時間" 
-                                class="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors ml-0.5">
-                            <i class="fa-solid fa-bolt text-xs"></i>
-                        </button>
-                    ` : ''}
-                </div>
-            `;
-        }
-
-        function setCurrentTime(roundIndex, fieldName) {
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            currentData.roundsData[roundIndex][fieldName] = `${hh}:${mm}`;
-            saveCurrentData();
-            renderTable();
-            showToast(`已更新 R${roundIndex + 1} 時間為 ${hh}:${mm}`);
-        }
-
-        function onTimeChange(roundIndex, fieldName, type, val) {
-            let currentVal = currentData.roundsData[roundIndex][fieldName] || '';
-            let [h, m] = currentVal.includes(':') ? currentVal.split(':') : ['', ''];
-
-            if (type === 'h') h = val;
-            if (type === 'm') m = val;
-
-            currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
-            saveCurrentData();
-            renderTable();
-        }
-
-        function parseToMinutes(timeStr) {
-            if (!timeStr || !timeStr.includes(':')) return null;
-            const parts = timeStr.split(':');
-            if (parts[0] === '' || parts[1] === '') return null;
-            const h = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10);
-            if (isNaN(h) || isNaN(m)) return null;
-            return h * 60 + m;
-        }
-
-        function formatDiffBadge(diffMinutes, isInvertedLogic = false) {
-            if (diffMinutes === null) {
-                return `<span class="text-slate-300 font-mono font-medium text-sm">--</span>`;
-            }
-
-            let text = `${diffMinutes > 0 ? '+' : ''}${diffMinutes} 分`;
-            let colorClass = 'bg-slate-100 text-slate-700 border-slate-300';
-
-            if (diffMinutes === 0) {
-                text = '0 分 (準時)';
-                colorClass = 'bg-slate-100 text-slate-700 border-slate-300 font-bold';
-            } else if (!isInvertedLogic) {
-                if (diffMinutes > 0) {
-                    colorClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
-                } else {
-                    colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+        // 初始化檢查 LocalStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    tournamentData = JSON.parse(saved);
+                    if (tournamentData.roundRows && tournamentData.roundRows.length > 0) {
+                        // 自動還填第一層設定
+                        document.getElementById('match-date').value = tournamentData.date || '';
+                        document.getElementById('match-location').value = tournamentData.location || '';
+                        document.getElementById('match-type').value = tournamentData.matchType || '';
+                        document.getElementById('match-rounds').value = tournamentData.rounds || 4;
+                        document.getElementById('match-division').value = tournamentData.division || '';
+                        
+                        // 切換至第二層
+                        switchLayer(2);
+                        renderTable();
+                    }
+                } catch (e) {
+                    console.error('載入本機資料失敗', e);
                 }
             } else {
-                if (diffMinutes > 0) {
-                    colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
-                } else {
-                    colorClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+                // 預設填入今天日期
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('match-date').value = today;
+            }
+        });
+
+        function switchLayer(layerNum) {
+            const l1 = document.getElementById('layer-1');
+            const l2 = document.getElementById('layer-2');
+            const ha = document.getElementById('header-actions');
+
+            if (layerNum === 1) {
+                l1.classList.remove('hidden');
+                l2.classList.add('hidden');
+                ha.classList.add('hidden');
+            } else {
+                l1.classList.add('hidden');
+                l2.classList.remove('hidden');
+                ha.classList.remove('hidden');
+            }
+        }
+
+        function handleStartTournament(e) {
+            e.preventDefault();
+            const date = document.getElementById('match-date').value;
+            const location = document.getElementById('match-location').value;
+            const matchType = document.getElementById('match-type').value;
+            const rounds = parseInt(document.getElementById('match-rounds').value) || 4;
+            const division = document.getElementById('match-division').value;
+
+            // 若輪次數量改變或初次建立，初始化 row 陣列
+            if (!tournamentData.roundRows || tournamentData.roundRows.length !== rounds) {
+                tournamentData.roundRows = [];
+                for (let i = 1; i <= rounds; i++) {
+                    tournamentData.roundRows.push({
+                        roundNum: i,
+                        // 藍色配對區
+                        planPubH: '', planPubM: '',
+                        actPubH: '', actPubM: '',
+                        // 綠色開賽區
+                        planStartH: '', planStartM: '',
+                        actStartH: '', actStartM: '',
+                        // 紫色比賽與結束區
+                        timeDueH: '', timeDueM: '',
+                        completeH: '', completeM: '',
+                        // 琥珀色桌次區
+                        planEndH: '', planEndM: ''
+                    });
                 }
             }
 
-            return `<span class="inline-block px-3 py-1.5 rounded-xl border text-sm font-mono tracking-tight shadow-sm ${colorClass}">${text}</span>`;
-        }
+            tournamentData.date = date;
+            tournamentData.location = location;
+            tournamentData.matchType = matchType;
+            tournamentData.rounds = rounds;
+            tournamentData.division = division;
 
-        function startTournament() {
-            const date = document.getElementById('inputDate').value;
-            const region = document.getElementById('inputRegion').value.trim();
-            const type = document.getElementById('inputType').value;
-            const rounds = parseInt(document.getElementById('inputRounds').value, 10);
-            const category = document.getElementById('inputCategory').value;
-
-            if (!region) {
-                showToast('請輸入賽事地區！', 'error');
-                return;
-            }
-
-            const tournamentId = 'tm_' + Date.now();
-            
-            currentData = {
-                id: tournamentId,
-                config: { date, region, type, rounds, category },
-                roundsData: []
-            };
-
-            for (let i = 1; i <= rounds; i++) {
-                currentData.roundsData.push({
-                    roundNum: i,
-                    p_announce: '',
-                    a_announce: '',
-                    p_start: '',
-                    a_start: '',
-                    game_over: '',
-                    all_clear: '',
-                    p_round_end: ''
-                });
-            }
-
-            saveCurrentData();
-            switchToStep2();
-            showToast('已成功建立賽事時間表！');
-        }
-
-        function loadTournament(id) {
-            const allHistory = getAllHistory();
-            if (allHistory[id]) {
-                currentData = allHistory[id];
-                switchToStep2();
-                showToast(`已載入：${currentData.config.region} (${currentData.config.category})`);
-            }
-        }
-
-        function saveCurrentData() {
-            if (!currentData.id) return;
-            const history = getAllHistory();
-            history[currentData.id] = currentData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        }
-
-        function getAllHistory() {
-            try {
-                const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : {};
-            } catch (e) {
-                return {};
-            }
-        }
-
-        function switchToStep2() {
-            document.getElementById('step1Page').classList.add('hidden');
-            document.getElementById('step2Page').classList.remove('hidden');
-
-            const conf = currentData.config;
-            document.getElementById('displayDate').innerText = conf.date;
-            document.getElementById('displayRegion').innerText = conf.region;
-            document.getElementById('displayRounds').innerText = conf.rounds;
-            document.getElementById('badgeCategory').innerText = conf.category;
-            document.getElementById('badgeType').innerText = conf.type;
-
-            const badgeType = document.getElementById('badgeType');
-            badgeType.className = 'px-3.5 py-1 rounded-full text-xs md:text-sm font-extrabold text-white shadow-sm ';
-            switch (conf.type) {
-                case '超級球': badgeType.classList.add('bg-blue-600'); break;
-                case '高級球': badgeType.classList.add('bg-amber-600'); break;
-                case '紀念球': badgeType.classList.add('bg-rose-600'); break;
-                case '大師球': badgeType.classList.add('bg-purple-600'); break;
-                default: badgeType.classList.add('bg-slate-800'); break;
-            }
-
+            saveToLocalStorage();
+            switchLayer(2);
             renderTable();
         }
 
-        function switchToStep1() {
-            document.getElementById('step2Page').classList.add('hidden');
-            document.getElementById('step1Page').classList.remove('hidden');
-            renderHistoryList();
+        function saveToLocalStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tournamentData));
         }
 
+        function clearLocalStorageData() {
+            if (confirm('確定要清除所有紀錄並重新設定嗎？')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        // 生成小時選項 (00 - 23)
+        function generateHourOptions(selectedVal) {
+            let html = '<option value="">時</option>';
+            for (let i = 0; i < 24; i++) {
+                const hStr = String(i).padStart(2, '0');
+                const sel = (selectedVal === hStr) ? 'selected' : '';
+                html += `<option value="${hStr}" ${sel}>${hStr}</option>`;
+            }
+            return html;
+        }
+
+        // 生成分鐘選項 (00 - 59)
+        function generateMinuteOptions(selectedVal) {
+            let html = '<option value="">分</option>';
+            for (let i = 0; i < 60; i += 1) { // 可以改為 i+=5 或 1
+                const mStr = String(i).padStart(2, '0');
+                const sel = (selectedVal === mStr) ? 'selected' : '';
+                html += `<option value="${mStr}" ${sel}>${mStr}</option>`;
+            }
+            return html;
+        }
+
+        // 轉換 HH 與 MM 為當天總分鐘數
+        function timeToMinutes(h, m) {
+            if (h === '' || m === '') return null;
+            return parseInt(h) * 60 + parseInt(m);
+        }
+
+        // 計算時間差（分鐘）：B - A
+        function calculateDiff(h1, m1, h2, m2) {
+            const t1 = timeToMinutes(h1, m1); // 前者 (預計)
+            const t2 = timeToMinutes(h2, m2); // 後者 (實際)
+            if (t1 === null || t2 === null) return { text: '-', status: 'normal', val: 0 };
+            
+            let diff = t2 - t1; // 實際減預計
+            let text = '';
+            let status = 'normal';
+
+            if (diff > 0) {
+                text = `+${diff} 分`;
+                status = 'late'; // 延誤
+            } else if (diff < 0) {
+                text = `${diff} 分`;
+                status = 'early'; // 提前
+            } else {
+                text = `0 分`;
+                status = 'on-time'; // 準時
+            }
+            return { text, status, val: diff };
+        }
+
+        // 渲染表格
         function renderTable() {
-            const tbody = document.getElementById('scheduleTbody');
+            // 更新上方摘要資訊
+            const summaryEl = document.getElementById('summary-info');
+            summaryEl.innerHTML = `
+                <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-xl text-xs sm:text-sm font-semibold">📅 ${tournamentData.date}</span>
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-xl text-xs sm:text-sm font-semibold">📍 ${tournamentData.location}</span>
+                <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-xl text-xs sm:text-sm font-semibold">🏆 ${tournamentData.matchType}</span>
+                <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-xl text-xs sm:text-sm font-semibold">👥 ${tournamentData.division}</span>
+                <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-xl text-xs sm:text-sm font-semibold">🔄 共 ${tournamentData.rounds} 輪</span>
+            `;
+
+            const tbody = document.getElementById('rounds-tbody');
             tbody.innerHTML = '';
 
-            currentData.roundsData.forEach((row, idx) => {
-                const pAnnounceMin = parseToMinutes(row.p_announce);
-                const aAnnounceMin = parseToMinutes(row.a_announce);
-                const diffAnnounce = (aAnnounceMin !== null && pAnnounceMin !== null) ? (aAnnounceMin - pAnnounceMin) : null;
-
-                const pStartMin = parseToMinutes(row.p_start);
-                const aStartMin = parseToMinutes(row.a_start);
-                const diffStart = (aStartMin !== null && pStartMin !== null) ? (aStartMin - pStartMin) : null;
-
-                const gameOverMin = parseToMinutes(row.game_over);
-                const allClearMin = parseToMinutes(row.all_clear);
-                const diffInRound = (allClearMin !== null && gameOverMin !== null) ? (allClearMin - gameOverMin) : null;
-
-                const pRoundEndMin = parseToMinutes(row.p_round_end);
-                const diffTable = (pRoundEndMin !== null && allClearMin !== null) ? (pRoundEndMin - allClearMin) : null;
+            tournamentData.roundRows.forEach((row, index) => {
+                // 計算各項時間差
+                // 1. 配對時間差 = 實際公布配對 - 預計公布配對
+                const pubDiff = calculateDiff(row.planPubH, row.planPubM, row.actPubH, row.actPubM);
+                // 2. 開賽時間差 = 實際開賽 - 預計開賽
+                const startDiff = calculateDiff(row.planStartH, row.planStartM, row.actStartH, row.actStartM);
+                // 3. 輪內時間差 = 完全結束 - 比賽時間到
+                const innerDiff = calculateDiff(row.timeDueH, row.timeDueM, row.completeH, row.completeM);
+                // 4. 與桌次時間差 = 預計輪次結束 - 完全結束
+                const deskDiff = calculateDiff(row.completeH, row.completeM, row.planEndH, row.planEndM);
 
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-200/80 text-center divide-x divide-slate-100';
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-slate-50 transition' : 'bg-slate-50/60 hover:bg-slate-100 transition';
 
                 tr.innerHTML = `
-                    <td class="py-3 px-2 font-black text-lg md:text-xl bg-slate-100/90 text-indigo-900 sticky-col border-r border-slate-200/90 shadow-sm font-mono">
+                    <!-- 輪次名稱 (固定左側) -->
+                    <td class="py-3 px-3 border-r border-slate-200 text-center font-bold text-slate-900 sticky-col bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                         R${row.roundNum}
                     </td>
 
-                    <td class="py-2.5 px-1.5 bg-blue-50/20">${buildTimePickerHTML(idx, 'p_announce', row.p_announce)}</td>
-                    <td class="py-2.5 px-1.5 bg-blue-50/20">${buildTimePickerHTML(idx, 'a_announce', row.a_announce)}</td>
-                    <td class="py-2.5 px-2 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
+                    <!-- 🔵 藍色配對區 -->
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-blue-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'planPubH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-blue-500 outline-none">${generateHourOptions(row.planPubH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'planPubM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-blue-500 outline-none">${generateMinuteOptions(row.planPubM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-blue-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'actPubH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-blue-500 outline-none">${generateHourOptions(row.actPubH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'actPubM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-blue-500 outline-none">${generateMinuteOptions(row.actPubM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 border-r border-slate-200 text-center bg-blue-50/35 font-semibold ${getDiffBadgeClass(pubDiff.status)}">
+                        ${pubDiff.text}
+                    </td>
 
-                    <td class="py-2.5 px-1.5 bg-emerald-50/20">${buildTimePickerHTML(idx, 'p_start', row.p_start)}</td>
-                    <td class="py-2.5 px-1.5 bg-emerald-50/20">${buildTimePickerHTML(idx, 'a_start', row.a_start)}</td>
-                    <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
+                    <!-- 🟢 綠色開賽區 -->
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-emerald-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'planStartH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-emerald-500 outline-none">${generateHourOptions(row.planStartH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'planStartM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-emerald-500 outline-none">${generateMinuteOptions(row.planStartM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-emerald-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'actStartH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-emerald-500 outline-none">${generateHourOptions(row.actStartH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'actStartM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-emerald-500 outline-none">${generateMinuteOptions(row.actStartM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 border-r border-slate-200 text-center bg-emerald-50/35 font-semibold ${getDiffBadgeClass(startDiff.status)}">
+                        ${startDiff.text}
+                    </td>
 
-                    <td class="py-2.5 px-1.5 bg-purple-50/20">${buildTimePickerHTML(idx, 'game_over', row.game_over)}</td>
-                    <td class="py-2.5 px-1.5 bg-purple-50/20">${buildTimePickerHTML(idx, 'all_clear', row.all_clear)}</td>
-                    <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
+                    <!-- 🟣 紫色比賽與結束區 -->
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-purple-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'timeDueH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-purple-500 outline-none">${generateHourOptions(row.timeDueH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'timeDueM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-purple-500 outline-none">${generateMinuteOptions(row.timeDueM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-purple-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'completeH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-purple-500 outline-none">${generateHourOptions(row.completeH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'completeM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-purple-500 outline-none">${generateMinuteOptions(row.completeM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 border-r border-slate-200 text-center bg-purple-50/35 font-semibold ${getDiffBadgeClass(innerDiff.status)}">
+                        ${innerDiff.text}
+                    </td>
 
-                    <td class="py-2.5 px-1.5 bg-amber-50/20">${buildTimePickerHTML(idx, 'p_round_end', row.p_round_end)}</td>
-                    <td class="py-2.5 px-2 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
+                    <!-- 🟠 琥珀色桌次區 -->
+                    <td class="py-2.5 px-2 border-r border-slate-200 bg-amber-50/20">
+                        <div class="flex items-center gap-1">
+                            <select onchange="updateCell(${index}, 'planEndH', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-amber-500 outline-none">${generateHourOptions(row.planEndH)}</select>
+                            <span class="text-slate-400">:</span>
+                            <select onchange="updateCell(${index}, 'planEndM', this.value)" class="w-16 px-1.5 py-1.5 text-sm border border-slate-300 rounded-lg bg-white custom-select focus:ring-1 focus:ring-amber-500 outline-none">${generateMinuteOptions(row.planEndM)}</select>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center bg-amber-50/35 font-semibold ${getDiffBadgeClass(deskDiff.status)}">
+                        ${deskDiff.text}
+                    </td>
                 `;
-
                 tbody.appendChild(tr);
             });
         }
 
-        function renderHistoryList() {
-            const container = document.getElementById('historyList');
-            const history = getAllHistory();
-            const keys = Object.keys(history).sort().reverse();
-
-            if (keys.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-10 text-center text-slate-400 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                        <i class="fa-solid fa-folder-open text-4xl mb-2.5 block text-slate-300"></i>
-                        <span class="font-bold text-base">目前沒有任何歷史賽事紀錄</span>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = keys.map(key => {
-                const item = history[key];
-                const conf = item.config;
-                return `
-                    <div class="border border-slate-200/90 hover:border-indigo-400 rounded-2xl p-4.5 bg-slate-50/50 hover:bg-white transition-all flex justify-between items-start group shadow-sm hover:shadow-md">
-                        <div class="space-y-2 cursor-pointer flex-grow" onclick="loadTournament('${item.id}')">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-black px-2.5 py-0.5 rounded-lg bg-slate-800 text-white">${conf.type}</span>
-                                <span class="text-xs font-bold px-2 py-0.5 rounded-lg bg-slate-200 text-slate-700">${conf.category}</span>
-                            </div>
-                            <h4 class="font-extrabold text-slate-800 text-lg group-hover:text-indigo-600 transition-colors">${conf.region} 賽事</h4>
-                            <p class="text-xs md:text-sm text-slate-500 font-medium">日期：${conf.date} | 總輪次：R${conf.rounds}</p>
-                        </div>
-                        <button onclick="deleteHistory('${item.id}', event)" class="text-slate-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-colors" title="刪除紀錄">
-                            <i class="fa-solid fa-trash-can text-base"></i>
-                        </button>
-                    </div>
-                `;
-            }).join('');
+        function getDiffBadgeClass(status) {
+            if (status === 'late') return 'text-rose-600 bg-rose-50/80';
+            if (status === 'early') return 'text-emerald-600 bg-emerald-50/80';
+            if (status === 'on-time') return 'text-slate-600 bg-slate-100/80';
+            return 'text-slate-400';
         }
 
-        function deleteHistory(id, e) {
-            e.stopPropagation();
-            if (confirm('確定要刪除這筆賽事紀錄嗎？')) {
-                const history = getAllHistory();
-                delete history[id];
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-                renderHistoryList();
-                showToast('已刪除紀錄');
+        function updateCell(index, field, value) {
+            tournamentData.roundRows[index][field] = value;
+            saveToLocalStorage();
+            renderTable(); // 重新整理畫面以即時計算時間差
+        }
+
+        function fillCurrentTimeAll() {
+            const now = new Date();
+            const hStr = String(now.getHours()).padStart(2, '0');
+            const mStr = String(now.getMinutes()).padStart(2, '0');
+
+            if (confirm(`是否將目前時間 (${hStr}:${mStr}) 填入第一個尚未填寫實際開賽的輪次？`)) {
+                for (let row of tournamentData.roundRows) {
+                    if (!row.actStartH || !row.actStartM) {
+                        row.actStartH = hStr;
+                        row.actStartM = mStr;
+                        break;
+                    }
+                }
+                saveToLocalStorage();
+                renderTable();
             }
         }
 
-        function clearAllHistory() {
-            if (confirm('確定要清空所有本機賽事歷史紀錄嗎？')) {
-                localStorage.removeItem(STORAGE_KEY);
-                renderHistoryList();
-                showToast('已清除所有紀錄');
+        // 匯出資料功能
+        function exportData(type) {
+            if (type === 'json') {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tournamentData, null, 2));
+                const dlAnchor = document.createElement('a');
+                dlAnchor.setAttribute("href", dataStr);
+                dlAnchor.setAttribute("download", `賽事時間紀錄_${tournamentData.date}_${tournamentData.matchType}.json`);
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
+            } else if (type === 'csv') {
+                let csvContent = "\uFEFF輪次,預計公布配對,實際公布配對,配對時間差(分),預計開賽,實際開賽,開賽時間差(分),比賽時間到,完全結束,輪內時間差(分),預計輪次結束,與桌次時間差(分)\n";
+                
+                tournamentData.roundRows.forEach(row => {
+                    const pubDiff = calculateDiff(row.planPubH, row.planPubM, row.actPubH, row.actPubM);
+                    const startDiff = calculateDiff(row.planStartH, row.planStartM, row.actStartH, row.actStartM);
+                    const innerDiff = calculateDiff(row.timeDueH, row.timeDueM, row.completeH, row.completeM);
+                    const deskDiff = calculateDiff(row.completeH, row.completeM, row.planEndH, row.planEndM);
+
+                    const line = [
+                        `R${row.roundNum}`,
+                        `"${row.planPubH}:${row.planPubM}"`,
+                        `"${row.actPubH}:${row.actPubM}"`,
+                        `"${pubDiff.val}"`,
+                        `"${row.planStartH}:${row.planStartM}"`,
+                        `"${row.actStartH}:${row.actStartM}"`,
+                        `"${startDiff.val}"`,
+                        `"${row.timeDueH}:${row.timeDueM}"`,
+                        `"${row.completeH}:${row.completeM}"`,
+                        `"${innerDiff.val}"`,
+                        `"${row.planEndH}:${row.planEndM}"`,
+                        `"${deskDiff.val}"`
+                    ].join(",");
+                    csvContent += line + "\n";
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const dlAnchor = document.createElement('a');
+                dlAnchor.setAttribute("href", url);
+                dlAnchor.setAttribute("download", `賽事時間紀錄_${tournamentData.date}_${tournamentData.matchType}.csv`);
+                document.body.appendChild(dlAnchor);
+                dlAnchor.click();
+                dlAnchor.remove();
             }
         }
 
-        // ==================== AI AGENT 分析模組邏輯 ====================
-
+        // API Key Modal 邏輯
         function openApiKeyModal() {
-            const key = localStorage.getItem(API_KEY_STORAGE) || '';
-            document.getElementById('apiKeyInput').value = key;
+            const savedKey = localStorage.getItem(API_KEY_STORAGE) || '';
+            document.getElementById('apiKeyInput').value = savedKey;
             document.getElementById('apiKeyModal').classList.remove('hidden');
         }
 
@@ -857,381 +638,146 @@
             const key = document.getElementById('apiKeyInput').value.trim();
             if (key) {
                 localStorage.setItem(API_KEY_STORAGE, key);
-                showToast('API Key 儲存成功！已啟用 LLM 深度智慧 Agent');
+                alert('API Key 已成功儲存！');
             } else {
                 localStorage.removeItem(API_KEY_STORAGE);
-                showToast('已清除 Key，恢復離線診斷模式');
+                alert('API Key 已清除，將使用離線規則引擎。');
             }
-            updateApiKeyUI();
             closeApiKeyModal();
         }
 
-        function removeApiKey() {
-            localStorage.removeItem(API_KEY_STORAGE);
-            document.getElementById('apiKeyInput').value = '';
-            updateApiKeyUI();
-            closeApiKeyModal();
-            showToast('已清除 Key');
-        }
-
-        function updateApiKeyUI() {
-            const key = localStorage.getItem(API_KEY_STORAGE);
-            const btnText = document.getElementById('apiKeyBtnText');
-            const badge = document.getElementById('agentModeBadge');
-
-            if (key) {
-                btnText.innerText = 'API Key (已儲存)';
-                badge.innerText = 'Gemini LLM 智慧分析模式';
-                badge.className = 'bg-purple-500/20 text-purple-300 border border-purple-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold';
-            } else {
-                btnText.innerText = '設定 API Key';
-                badge.innerText = '離線規則引擎模式';
-                badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold';
-            }
-        }
-
-        function closeAiModal() {
-            document.getElementById('aiModal').classList.add('hidden');
-        }
-
-        // 執行 AI 賽事診斷入口
-        async function runAiAnalysis() {
-            document.getElementById('aiModal').classList.remove('hidden');
-            document.getElementById('aiLoading').classList.remove('hidden');
-            document.getElementById('aiReportContainer').classList.add('hidden');
+        // AI 賽事效率分析 Agent 核心引擎
+        async function runAiAgentAnalysis() {
+            const container = document.getElementById('ai-agent-result-container');
+            const contentEl = document.getElementById('ai-agent-content');
+            const badgeEl = document.getElementById('ai-engine-badge');
+            
+            container.classList.remove('hidden');
+            contentEl.innerHTML = `<div class="flex items-center gap-2 py-4 text-indigo-300 animate-pulse"><span>🔄</span> AI Agent 正在深度掃描各輪次時間差與效率瓶頸中...</div>`;
 
             const apiKey = localStorage.getItem(API_KEY_STORAGE);
 
             if (!apiKey) {
-                // 模式 A: 離線規則診斷引擎
-                document.getElementById('aiModalSubtitle').innerText = '純離線系統規則引擎自動診斷中...';
+                // 執行離線智慧規則診斷引擎
                 setTimeout(() => {
-                    generateRuleBasedReport();
+                    generateOfflineAiReport(contentEl, badgeEl);
                 }, 600);
             } else {
-                // 模式 B: Gemini LLM Agent 智慧診斷
-                document.getElementById('aiModalSubtitle').innerText = 'Gemini LLM 正在分析各輪數據與雪球效應...';
-                await generateGeminiLlmReport(apiKey);
+                // 調用 Gemini API 進行深度雲端分析
+                try {
+                    await callGeminiApiAgent(apiKey, contentEl, badgeEl);
+                } catch (err) {
+                    console.warn('Gemini API 呼叫失敗，自動切換至離線規則引擎:', err);
+                    generateOfflineAiReport(contentEl, badgeEl, true);
+                }
             }
         }
 
-        // 離線規則引擎診斷計算
-        function generateRuleBasedReport() {
-            const rounds = currentData.roundsData;
-            let totalPairingDelay = 0;
+        function generateOfflineAiReport(contentEl, badgeEl, fallback = false) {
+            badgeEl.innerHTML = fallback ? "⚠️ 雲端連線失敗，已自動啟用【離線智慧規則引擎】" : "🛡️ 【離線智慧規則引擎】診斷報告";
+            
+            let totalPubDelay = 0;
             let totalStartDelay = 0;
-            let totalInRoundOvertime = 0;
-            let lowEfficiencyRounds = [];
-            let totalFilledRounds = 0;
+            let maxDelayRound = 1;
+            let maxDelayVal = -999;
+            let issuesFound = [];
 
-            rounds.forEach(r => {
-                const pAnn = parseToMinutes(r.p_announce);
-                const aAnn = parseToMinutes(r.a_announce);
-                const pStart = parseToMinutes(r.p_start);
-                const aStart = parseToMinutes(r.a_start);
-                const gOver = parseToMinutes(r.game_over);
-                const aClear = parseToMinutes(r.all_clear);
-                const pEnd = parseToMinutes(r.p_round_end);
+            tournamentData.roundRows.forEach((row, idx) => {
+                const pub = calculateDiff(row.planPubH, row.planPubM, row.actPubH, row.actPubM);
+                const start = calculateDiff(row.planStartH, row.planStartM, row.actStartH, row.actStartM);
+                const desk = calculateDiff(row.completeH, row.completeM, row.planEndH, row.planEndM);
 
-                let issues = [];
-
-                if (pAnn !== null && aAnn !== null) {
-                    const diff = aAnn - pAnn;
-                    if (diff > 0) totalPairingDelay += diff;
-                    if (diff >= 5) issues.push(`配對公布延遲 ${diff} 分鐘`);
+                if (pub.val > 0) totalPubDelay += pub.val;
+                if (start.val > 0) {
+                    totalStartDelay += start.val;
+                    if (start.val > maxDelayVal) {
+                        maxDelayVal = start.val;
+                        maxDelayRound = row.roundNum;
+                    }
                 }
 
-                if (pStart !== null && aStart !== null) {
-                    const diff = aStart - pStart;
-                    if (diff > 0) totalStartDelay += diff;
-                    if (diff >= 5) issues.push(`開賽延誤 ${diff} 分鐘`);
+                if (start.val >= 10) {
+                    issuesFound.push(`• **R${row.roundNum} 開賽嚴重延誤**：實際開賽比預計超時 ${start.val} 分鐘，建議檢視前置桌次點名或報到程序。`);
                 }
-
-                if (gOver !== null && aClear !== null) {
-                    const diff = aClear - gOver;
-                    if (diff > 0) totalInRoundOvertime += diff;
-                    if (diff >= 10) issues.push(`死鬥/死局清理拖延 ${diff} 分鐘`);
-                }
-
-                if (pEnd !== null && aClear !== null) {
-                    const diff = pEnd - aClear;
-                    if (diff < 0) issues.push(`拖桌擠壓時間 ${Math.abs(diff)} 分鐘`);
-                }
-
-                if (pAnn !== null || aAnn !== null || pStart !== null) {
-                    totalFilledRounds++;
-                }
-
-                if (issues.length > 0) {
-                    lowEfficiencyRounds.push({ roundNum: r.roundNum, issues });
+                if (desk.val < -10) {
+                    issuesFound.push(`• **R${row.roundNum} 桌次超時嚴重**：輪次實際完全結束時間超出預計結束時間達 ${Math.abs(desk.val)} 分鐘，可能存在延長賽或平手局過多狀況。`);
                 }
             });
 
-            // 計算健康度評分 (0 ~ 100)
-            let healthScore = 100 - (totalPairingDelay * 2) - (totalStartDelay * 2.5) - (totalInRoundOvertime * 1.5) - (lowEfficiencyRounds.length * 8);
-            if (healthScore < 0) healthScore = 0;
+            let healthScore = 100 - (totalStartDelay * 1.5) - (totalPubDelay * 0.8);
+            healthScore = Math.max(30, Math.min(100, Math.round(healthScore)));
 
-            // 渲染 Header 數據
-            const headerHtml = `
-                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col justify-between">
-                    <span class="text-xs font-bold text-indigo-700 uppercase">賽事運作健康度分數</span>
-                    <div class="flex items-baseline gap-1 mt-1">
-                        <span class="text-3xl font-black ${healthScore >= 80 ? 'text-emerald-600' : healthScore >= 60 ? 'text-amber-600' : 'text-rose-600'}">${Math.round(healthScore)}</span>
-                        <span class="text-xs text-slate-400 font-bold">/ 100</span>
+            let html = `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <div class="bg-indigo-950/60 p-3.5 rounded-xl border border-indigo-800/60">
+                        <div class="text-xs text-indigo-300">賽事健康效率評分</div>
+                        <div class="text-2xl font-black text-emerald-400 mt-1">${healthScore} <span class="text-sm font-normal text-slate-300">/ 100 分</span></div>
+                    </div>
+                    <div class="bg-indigo-950/60 p-3.5 rounded-xl border border-indigo-800/60">
+                        <div class="text-xs text-indigo-300">累計開賽延誤</div>
+                        <div class="text-2xl font-black text-amber-400 mt-1">${totalStartDelay} <span class="text-sm font-normal text-slate-300">分鐘</span></div>
+                    </div>
+                    <div class="bg-indigo-950/60 p-3.5 rounded-xl border border-indigo-800/60">
+                        <div class="text-xs text-indigo-300">最大延誤瓶頸</div>
+                        <div class="text-2xl font-black text-rose-400 mt-1">R${maxDelayRound} <span class="text-sm font-normal text-slate-300">(${maxDelayVal > 0 ? '+' + maxDelayVal + '分' : '無延誤'})</span></div>
                     </div>
                 </div>
 
-                <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex flex-col justify-between">
-                    <span class="text-xs font-bold text-amber-700 uppercase">發現低效瓶頸輪次</span>
-                    <div class="flex items-baseline gap-1 mt-1">
-                        <span class="text-3xl font-black text-amber-800">${lowEfficiencyRounds.length}</span>
-                        <span class="text-xs text-slate-500">個輪次 (總共 R${rounds.length})</span>
-                    </div>
+                <div class="space-y-2 pt-2 border-t border-indigo-900">
+                    <h4 class="font-bold text-indigo-200">🔍 智慧瓶頸與低效原因歸納：</h4>
+                    ${issuesFound.length > 0 ? issuesFound.join('<br>') : '<p class="text-emerald-300">✨ 目前各輪次運作順暢，無顯著低效瓶頸！</p>'}
                 </div>
 
-                <div class="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex flex-col justify-between">
-                    <span class="text-xs font-bold text-purple-700 uppercase">累計延誤耗時</span>
-                    <div class="flex items-baseline gap-1 mt-1">
-                        <span class="text-3xl font-black text-purple-800">${totalPairingDelay + totalStartDelay + totalInRoundOvertime}</span>
-                        <span class="text-xs text-slate-500">總延遲分鐘</span>
-                    </div>
+                <div class="space-y-2 pt-2 border-t border-indigo-900">
+                    <h4 class="font-bold text-indigo-200">💡 賽務改善建議：</h4>
+                    <p class="text-slate-300 text-sm">1. 若配對公佈時間持續落後，建議提前 5 分鐘進行系統自動 pairing 排版。<br>2. 針對超過時間上限的桌次，可於後續輪次加強裁判巡場催局，避免雪球效應影響後續賽程。</p>
                 </div>
             `;
-            document.getElementById('aiSummaryHeader').innerHTML = headerHtml;
-
-            // 生成報告 HTML
-            let reportHtml = `<h3><i class="fa-solid fa-list-check text-indigo-600"></i> 離線規則診斷報告明細</h3>`;
-
-            if (totalFilledRounds === 0) {
-                reportHtml += `<p class="text-slate-500">尚無完整的輪次時間紀錄。請先在表格中填入預計與實際時間，AI Agent 將會為您解析低效瓶頸！</p>`;
-            } else if (lowEfficiencyRounds.length === 0) {
-                reportHtml += `<p class="text-emerald-700 font-bold">🎉 太棒了！目前所有已填寫輪次運作極為流暢，配對與開賽皆在標準掌控時間內。</p>`;
-            } else {
-                reportHtml += `<p class="text-slate-700">經過離線規則引擎掃描，以下輪次表現出效率低下的跡象：</p><ul>`;
-                lowEfficiencyRounds.forEach(item => {
-                    reportHtml += `<li><strong>R${item.roundNum} 輪次：</strong> ${item.issues.join('、 ')}</li>`;
-                });
-                reportHtml += `</ul>`;
-
-                reportHtml += `<h3><i class="fa-solid fa-lightbulb text-amber-500"></i> 現場改善實務建議</h3><ul>`;
-                if (totalPairingDelay > 0) {
-                    reportHtml += `<li><strong>配對發布卡關：</strong>建議下一輪提前 3 分鐘核對成績卡，或採用數位螢幕/線上 QR Code 輔助公布。</li>`;
-                }
-                if (totalInRoundOvertime > 0) {
-                    reportHtml += `<li><strong>死鬥/死局耗時過長：</strong>比賽時間到的前 5 分鐘安排裁判巡場，提示選手加快動態，時間到立即進行回合倒數檢核。</li>`;
-                }
-                if (totalStartDelay > 0) {
-                    reportHtml += `<li><strong>選手就座遲緩：</strong>播放語音廣播提醒選手就座，並在桌次廣播無人就座後 3 分鐘進行判罰處置。</li>`;
-                }
-                reportHtml += `</ul>`;
-            }
-
-            document.getElementById('aiReportText').innerHTML = reportHtml;
-            document.getElementById('aiChatSection').classList.add('hidden');
-
-            lastAiReportText = reportHtml.replace(/<[^>]*>/g, '');
-
-            document.getElementById('aiLoading').classList.add('hidden');
-            document.getElementById('aiReportContainer').classList.remove('hidden');
+            contentEl.innerHTML = html;
         }
 
-        // Gemini LLM Agent API 呼叫
-        async function generateGeminiLlmReport(apiKey) {
-            const systemPrompt = `你是一位世界級的寶可夢/卡牌賽事總裁判兼營運時間檢核專家。
-你將收到一筆賽事的完整時間紀錄 JSON 數據。
-請針對這筆賽事進行多維度深度效率診斷報告，格式採用清晰的 HTML/Markdown 風格，包含：
-1. 【總體運作效率評估】：給予 0~100 的健康度評分與簡短總結。
-2. 【低效輪次精準定位與成因歸因】：點名特定輪次（如 R1, R3...），分析是配對公布卡關、開賽就座緩慢，還是輪內死鬥拖桌過長。
-3. 【跨輪次延誤連鎖效應（雪球效應）】：分析上一輪的結束遲延如何擠壓到下一輪的預計開賽。
-4. 【現場裁決與工作人員人力調配實務建議】：給予現場裁判與賽務組極具可行性的操作建議。`;
-
-            const prompt = `賽事設定：${JSON.stringify(currentData.config)}
-輪次時間資料：
-${JSON.stringify(currentData.roundsData)}
-
-請為這場賽事生成時間效率分析診斷報告。`;
-
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
-                    })
-                });
-
-                const result = await response.json();
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (!text) {
-                    throw new Error('API 無法取得回應或金鑰失效');
-                }
-
-                // 簡單將 Markdown 的 ** 轉為 bold, # 轉為標題
-                let formattedText = text
-                    .replace(/### (.*)/g, '<h3 class="text-lg font-bold text-slate-800 mt-4 mb-2">$1</h3>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
-                    .replace(/\n\n/g, '</p><p class="mt-2">')
-                    .replace(/\* (.*)/g, '<li class="ml-4 list-disc">$1</li>');
-
-                document.getElementById('aiSummaryHeader').innerHTML = `
-                    <div class="col-span-full bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-4.5 rounded-2xl flex items-center justify-between shadow-md">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-sparkles text-amber-400 text-2xl"></i>
-                            <div>
-                                <h4 class="font-extrabold text-base">Gemini 3 Flash 智慧分析已生成</h4>
-                                <p class="text-xs text-purple-200">依據現有輪次時間進行多維度歸因與連鎖效應分析</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                document.getElementById('aiReportText').innerHTML = `<div class="space-y-3">${formattedText}</div>`;
-                document.getElementById('aiChatSection').classList.remove('hidden');
-
-                lastAiReportText = text;
-
-            } catch (err) {
-                console.error(err);
-                showToast('Gemini API 調用失敗，已切換至離線診斷', 'error');
-                generateRuleBasedReport();
-                return;
-            }
-
-            document.getElementById('aiLoading').classList.add('hidden');
-            document.getElementById('aiReportContainer').classList.remove('hidden');
-        }
-
-        // 與 Gemini 進行追加問題對話
-        async function sendUserQuery() {
-            const input = document.getElementById('userQueryInput');
-            const query = input.value.trim();
-            const apiKey = localStorage.getItem(API_KEY_STORAGE);
-
-            if (!query || !apiKey) return;
-
-            const chatHistory = document.getElementById('chatHistory');
-            chatHistory.innerHTML += `<div class="text-right font-bold text-indigo-700">問：${query}</div>`;
-            input.value = '';
-
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                const prompt = `對話歷史情境：賽事時間數據為 ${JSON.stringify(currentData.roundsData)}。先前分析：${lastAiReportText}。
-使用者追加問題：${query}`;
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-
-                const result = await response.json();
-                const reply = result?.candidates?.[0]?.content?.parts?.[0]?.text || '無回應';
-
-                chatHistory.innerHTML += `<div class="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-800 mt-1"><strong>Gemini AI：</strong>${reply}</div>`;
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-
-            } catch (e) {
-                chatHistory.innerHTML += `<div class="text-rose-600">發送失敗：${e.message}</div>`;
-            }
-        }
-
-        // 匯出 AI 報告文字檔
-        function exportAiReport() {
-            if (!lastAiReportText) return;
-            const conf = currentData.config;
-            const content = `【賽事時間效率 AI 診斷報告】\n賽事：${conf.region} (${conf.category})\n日期：${conf.date}\n\n${lastAiReportText}`;
+        async function callGeminiApiAgent(apiKey, contentEl, badgeEl) {
+            badgeEl.innerHTML = "☁️ 【Gemini LLM 雲端智慧 Agent】深度分析中...";
             
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `AI診斷報告_${conf.region}_${conf.date}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('已成功下載 AI 診斷報告！');
-        }
+            const promptData = JSON.stringify(tournamentData);
+            const systemPrompt = "你是一位頂尖的集換式卡牌大賽裁判長與賽事運作效率專家。請根據使用者提供的賽事各輪次時間記錄（包含配對、開賽、比賽時間到、完全結束、預計結束），進行精準的低效輪次歸因、連鎖雪球效應分析，並給出專業的賽事時間管理與人力調配改善建議。請用繁體中文回覆，結構清晰並附帶效率評分。";
 
-        // 匯出 JSON
-        function exportJSON() {
-            if (!currentData || !currentData.roundsData) return;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `賽事時間紀錄_${currentData.config.region}_${currentData.config.date}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            showToast('已成功匯出 JSON 檔案');
-        }
-
-        // 匯出 CSV 報表
-        function exportCSV() {
-            if (!currentData || !currentData.roundsData) return;
-
-            let csvContent = "\uFEFF"; // UTF-8 BOM
-            const conf = currentData.config;
-            
-            csvContent += `賽事日期,${conf.date}\n`;
-            csvContent += `地區,${conf.region}\n`;
-            csvContent += `賽事種類,${conf.type}\n`;
-            csvContent += `組別,${conf.category}\n`;
-            csvContent += `總輪次,R${conf.rounds}\n\n`;
-
-            csvContent += "輪次,預計公布配對,實際公布配對,配對時間差(分),預計開賽,實際開賽,開賽時間差(分),比賽時間到,完全結束,輪內時間差(分),預計輪次結束,與桌次時間差(分)\n";
-
-            currentData.roundsData.forEach(row => {
-                const pAnnounceMin = parseToMinutes(row.p_announce);
-                const aAnnounceMin = parseToMinutes(row.a_announce);
-                const diffAnnounce = (aAnnounceMin !== null && pAnnounceMin !== null) ? (aAnnounceMin - pAnnounceMin) : '';
-
-                const pStartMin = parseToMinutes(row.p_start);
-                const aStartMin = parseToMinutes(row.a_start);
-                const diffStart = (aStartMin !== null && pStartMin !== null) ? (aStartMin - pStartMin) : '';
-
-                const gameOverMin = parseToMinutes(row.game_over);
-                const allClearMin = parseToMinutes(row.all_clear);
-                const diffInRound = (allClearMin !== null && gameOverMin !== null) ? (allClearMin - gameOverMin) : '';
-
-                const pRoundEndMin = parseToMinutes(row.p_round_end);
-                const diffTable = (pRoundEndMin !== null && allClearMin !== null) ? (pRoundEndMin - allClearMin) : '';
-
-                csvContent += `R${row.roundNum},${row.p_announce},${row.a_announce},${diffAnnounce},${row.p_start},${row.a_start},${diffStart},${row.game_over},${row.all_clear},${diffInRound},${row.p_round_end},${diffTable}\n`;
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [
+                        { role: 'user', parts: [{ text: systemPrompt + "\n\n以下是賽事數據JSON：\n" + promptData }] }
+                    ]
+                })
             });
 
-            const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `賽事時間報表_${conf.region}_${conf.date}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            showToast('已匯出 Excel/CSV 報表');
+            if (!response.ok) throw new Error('API 請求失敗');
+            const data = await response.json();
+            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '無法解析 AI 回應';
+
+            contentEl.innerHTML = `
+                <div class="bg-indigo-950/60 p-4 rounded-xl border border-indigo-800/80 space-y-3">
+                    <div class="text-xs font-semibold text-emerald-400">✨ Gemini LLM 專業賽事分析報告</div>
+                    <div class="whitespace-pre-wrap text-slate-200 text-sm sm:text-base">${textResponse}</div>
+                </div>
+            `;
         }
 
-        // Toast 提示訊息
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMsg');
-            const toastIcon = document.getElementById('toastIcon');
+        function closeAiResult() {
+            document.getElementById('ai-agent-result-container').classList.add('hidden');
+        }
 
-            toastMsg.innerText = msg;
-            if (type === 'error') {
-                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-xl';
-            } else {
-                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-xl';
-            }
-
-            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
-            
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
-            }, 2800);
+        function exportAiReport() {
+            const reportText = document.getElementById('ai-agent-content').innerText;
+            const blob = new Blob([reportText], { type: 'text/markdown;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const dl = document.createElement('a');
+            dl.href = url;
+            dl.download = `AI賽事效率診斷報告_${tournamentData.date}.md`;
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
         }
     </script>
 </body>
