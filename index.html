@@ -8,7 +8,7 @@
     <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="賽事計時器">
+    <meta name="apple-mobile-web-app-title" content="EOR-RECORD">
 
     <!-- 🚫 強制瀏覽器不快取 HTML 頁面 -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -20,6 +20,9 @@
     <!-- FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- 📷 引入 html2canvas 網頁截圖函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -191,114 +194,122 @@
 
         <!-- 第二層：輪次時間表頁面 -->
         <section id="step2Page" class="space-y-4 hidden">
-            <!-- 頂部資訊欄 -->
-            <div class="bg-white rounded-2xl shadow-md p-4 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div class="space-y-1.5 w-full lg:w-auto">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span id="badgeType" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold text-white bg-slate-700">--</span>
-                        <span id="badgeCategory" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
-                        <span id="badgeRegion" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                            <i class="fa-solid fa-location-dot"></i> <span id="displayRegion">--</span>
-                        </span>
-                        <span id="badgeDate" class="text-xs md:text-sm text-slate-500 flex items-center gap-1 ml-1">
-                            <i class="fa-regular fa-calendar"></i> <span id="displayDate">--</span>
-                        </span>
-                    </div>
-                    <h2 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-2">
-                        賽事時間效率明細表
-                        <span class="text-base font-normal text-slate-500">(共 <span id="displayRounds">0</span> 輪)</span>
-                    </h2>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-stretch md:justify-end">
-                    <!-- 帶有確認提示的返回設定按鈕 -->
-                    <button onclick="switchToStep1()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
-                        <i class="fa-solid fa-arrow-left"></i> 返回設定
-                    </button>
-                    
-                    <!-- 🧹 分區清除選擇按鈕 -->
-                    <div class="relative flex-1 md:flex-initial">
-                        <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer appearance-none pr-8 shadow-sm">
-                            <option value="" disabled selected>🧹 清除項目...</option>
-                            <option value="announce">僅清除「配對區」時間</option>
-                            <option value="start">僅清除「開賽區」時間</option>
-                            <option value="end">僅清除「比賽結束區」時間</option>
-                            <option value="all">清空全部數據</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-rose-500 pointer-events-none"></i>
+            <!-- 欲截圖匯出的完整區域範圍 id="captureArea" -->
+            <div id="captureArea" class="space-y-4 p-2 bg-slate-100 rounded-2xl">
+                <!-- 頂部資訊欄 -->
+                <div class="bg-white rounded-2xl shadow-md p-4 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div class="space-y-1.5 w-full lg:w-auto">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="badgeType" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeCategory" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
+                            <span id="badgeRegion" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                                <i class="fa-solid fa-location-dot"></i> <span id="displayRegion">--</span>
+                            </span>
+                            <span id="badgeDate" class="text-xs md:text-sm text-slate-500 flex items-center gap-1 ml-1">
+                                <i class="fa-regular fa-calendar"></i> <span id="displayDate">--</span>
+                            </span>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-2">
+                            賽事時間效率明細表
+                            <span class="text-base font-normal text-slate-500">(共 <span id="displayRounds">0</span> 輪)</span>
+                        </h2>
                     </div>
 
-                    <!-- 第二層匯入 JSON 按鈕 -->
-                    <button onclick="triggerImportJson()" class="flex-1 md:flex-initial bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-file-import"></i> 匯入 JSON
-                    </button>
-                    <button onclick="exportJSON()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
-                        <i class="fa-solid fa-file-code"></i> 匯出 JSON
-                    </button>
-                    <button onclick="exportCSV()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-file-csv"></i> 匯出 CSV 報表
-                    </button>
+                    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-stretch md:justify-end" data-html2canvas-ignore="true">
+                        <!-- 帶有確認提示的返回設定按鈕 -->
+                        <button onclick="switchToStep1()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
+                            <i class="fa-solid fa-arrow-left"></i> 返回設定
+                        </button>
+                        
+                        <!-- 🧹 分區清除選擇按鈕 -->
+                        <div class="relative flex-1 md:flex-initial">
+                            <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer appearance-none pr-8 shadow-sm">
+                                <option value="" disabled selected>🧹 清除項目...</option>
+                                <option value="announce">僅清除「配對區」時間</option>
+                                <option value="start">僅清除「開賽區」時間</option>
+                                <option value="end">僅清除「比賽結束區」時間</option>
+                                <option value="all">清空全部數據</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-rose-500 pointer-events-none"></i>
+                        </div>
+
+                        <!-- 📷 匯出 PNG 圖片按鈕 -->
+                        <button onclick="exportImage()" class="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-camera"></i> 匯出圖片
+                        </button>
+
+                        <!-- 第二層匯入 JSON 按鈕 -->
+                        <button onclick="triggerImportJson()" class="flex-1 md:flex-initial bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-file-import"></i> 匯入 JSON
+                        </button>
+                        <button onclick="exportJSON()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
+                            <i class="fa-solid fa-file-code"></i> 匯出 JSON
+                        </button>
+                        <button onclick="exportCSV()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-file-csv"></i> 匯出 CSV 報表
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- 時間表主要表格 -->
-            <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
-                    <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1360px]">
-                        <thead class="text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
-                            <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
-                                <th scope="col" class="py-3 px-3 w-16 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
-                                <th scope="col" colspan="3" class="py-3 px-2 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <span><i class="fa-solid fa-bullhorn mr-1"></i> 配對公布區</span>
-                                        <button onclick="clearSectionData('announce')" title="清除此區數據" class="text-xs bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1.5 py-0.5 rounded border border-blue-400/40 transition-colors">
-                                            <i class="fa-solid fa-eraser"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="3" class="py-3 px-2 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <span><i class="fa-solid fa-flag-checkered mr-1"></i> 開賽時程區</span>
-                                        <button onclick="clearSectionData('start')" title="清除此區數據" class="text-xs bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1.5 py-0.5 rounded border border-emerald-400/40 transition-colors">
-                                            <i class="fa-solid fa-eraser"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="3" class="py-3 px-2 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <span><i class="fa-solid fa-clock mr-1"></i> 比賽與結束區</span>
-                                        <button onclick="clearSectionData('end')" title="清除此區數據" class="text-xs bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1.5 py-0.5 rounded border border-purple-400/40 transition-colors">
-                                            <i class="fa-solid fa-eraser"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th scope="col" colspan="2" class="py-3 px-2 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
-                                    <i class="fa-solid fa-hourglass-half mr-1"></i> 桌次時間區
-                                </th>
-                            </tr>
-                            <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200">
-                                <th class="py-2.5 px-2 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
-                                
-                                <th class="py-2.5 px-2 bg-blue-950/40 w-44">預計公布配對</th>
-                                <th class="py-2.5 px-2 bg-blue-950/40 w-48">實際公布配對</th>
-                                <th class="py-2.5 px-2 bg-blue-900/60 w-32 text-blue-200">配對時間差</th>
+                <!-- 時間表主要表格 -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
+                        <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1360px]">
+                            <thead class="text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
+                                <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
+                                    <th scope="col" class="py-3 px-3 w-16 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
+                                    <th scope="col" colspan="3" class="py-3 px-2 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <span><i class="fa-solid fa-bullhorn mr-1"></i> 配對公布區</span>
+                                            <button onclick="clearSectionData('announce')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1.5 py-0.5 rounded border border-blue-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="3" class="py-3 px-2 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <span><i class="fa-solid fa-flag-checkered mr-1"></i> 開賽時程區</span>
+                                            <button onclick="clearSectionData('start')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1.5 py-0.5 rounded border border-emerald-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="3" class="py-3 px-2 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <span><i class="fa-solid fa-clock mr-1"></i> 比賽與結束區</span>
+                                            <button onclick="clearSectionData('end')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1.5 py-0.5 rounded border border-purple-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="2" class="py-3 px-2 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
+                                        <i class="fa-solid fa-hourglass-half mr-1"></i> 桌次時間區
+                                    </th>
+                                </tr>
+                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200">
+                                    <th class="py-2.5 px-2 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
+                                    
+                                    <th class="py-2.5 px-2 bg-blue-950/40 w-44">預計公布配對</th>
+                                    <th class="py-2.5 px-2 bg-blue-950/40 w-48">實際公布配對</th>
+                                    <th class="py-2.5 px-2 bg-blue-900/60 w-32 text-blue-200">配對時間差</th>
 
-                                <th class="py-2.5 px-2 bg-emerald-950/40 w-44">預計開賽</th>
-                                <th class="py-2.5 px-2 bg-emerald-950/40 w-48">實際開賽</th>
-                                <th class="py-2.5 px-2 bg-emerald-900/60 w-32 text-emerald-200">開賽時間差</th>
+                                    <th class="py-2.5 px-2 bg-emerald-950/40 w-44">預計開賽</th>
+                                    <th class="py-2.5 px-2 bg-emerald-950/40 w-48">實際開賽</th>
+                                    <th class="py-2.5 px-2 bg-emerald-900/60 w-32 text-emerald-200">開賽時間差</th>
 
-                                <th class="py-2.5 px-2 bg-purple-950/40 w-44">預計輪次結束</th>
-                                <th class="py-2.5 px-2 bg-purple-950/40 w-48">最後成績回報</th>
-                                <th class="py-2.5 px-2 bg-purple-900/60 w-32 text-purple-200">輪內時間差</th>
+                                    <th class="py-2.5 px-2 bg-purple-950/40 w-44">預計輪次結束</th>
+                                    <th class="py-2.5 px-2 bg-purple-950/40 w-48">最後成績回報</th>
+                                    <th class="py-2.5 px-2 bg-purple-900/60 w-32 text-purple-200">輪內時間差</th>
 
-                                <th class="py-2.5 px-2 bg-amber-950/40 w-44">比賽時間到</th>
-                                <th class="py-2.5 px-2 bg-amber-900/60 w-36 text-amber-200">與桌次時間差</th>
-                            </tr>
-                        </thead>
-                        <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
-                            <!-- 動態生成輪次列 -->
-                        </tbody>
-                    </table>
+                                    <th class="py-2.5 px-2 bg-amber-950/40 w-44">比賽時間到</th>
+                                    <th class="py-2.5 px-2 bg-amber-900/60 w-36 text-amber-200">與桌次時間差</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
+                                <!-- 動態生成輪次列 -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -372,6 +383,27 @@
             document.getElementById('dl-mins').innerHTML = mHTML;
         }
 
+        // ---------- 📷 將表格區域匯出為圖片 (PNG) ----------
+        function exportImage() {
+            const captureTarget = document.getElementById('captureArea');
+            showToast('正在生成賽事報表圖片...', 'info');
+
+            html2canvas(captureTarget, {
+                scale: 2, // 提高解析度（2倍清晰度）
+                useCORS: true,
+                backgroundColor: '#f1f5f9'
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast('已成功匯出高畫質圖片！');
+            }).catch(err => {
+                console.error('Canvas export error:', err);
+                showToast('圖片生成失敗，請再試一次', 'error');
+            });
+        }
+
         // ---------- 🧹 下拉選單處理分區清除 ----------
         function handleClearSection(selectEl) {
             const type = selectEl.value;
@@ -380,7 +412,6 @@
             selectEl.selectedIndex = 0;
         }
 
-        // 執行分區清除核心邏輯
         function clearSectionData(type) {
             if (!currentData.roundsData || currentData.roundsData.length === 0) return;
 
@@ -489,7 +520,7 @@
             return null;
         }
 
-        // ---------- ⏱️ 雙模態輸入框 (可控制是否顯示 NOW 按鈕) ----------
+        // ---------- ⏱️ 雙模態輸入框 ----------
         function buildTimeInputHTML(roundIndex, fieldName, value, showNowButton = false) {
             let [h, m] = value ? value.split(':') : ['', ''];
             
@@ -505,7 +536,7 @@
                     
                     ${showNowButton ? `
                         <button type="button" onclick="fillNowTime(${roundIndex}, '${fieldName}')" 
-                                title="填入現在時間"
+                                title="填入現在時間" data-html2canvas-ignore="true"
                                 class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-xs px-1.5 py-1 rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95">
                             NOW
                         </button>
@@ -514,7 +545,6 @@
             `;
         }
 
-        // ⏱️ 填入現在時間的專用邏輯
         function fillNowTime(roundIndex, fieldName) {
             const now = new Date();
             const h = String(now.getHours()).padStart(2, '0');
@@ -678,7 +708,6 @@
             renderTable();
         }
 
-        // ---------- 返回設定頁面（確認二次提示） ----------
         function switchToStep1() {
             const hasEnteredData = currentData.roundsData && currentData.roundsData.some(r => 
                 r.p_announce || r.a_announce || r.p_start || r.a_start || r.all_clear || r.p_round_end
@@ -725,22 +754,22 @@
                     <td class="py-3 px-2 font-extrabold text-base md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
                         R${row.roundNum}
                     </td>
-                    <!-- 區塊 1：配對區 (預計不用 NOW, 實際要 NOW) -->
+                    <!-- 區塊 1：配對區 -->
                     <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
                     <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
                     <td class="py-2.5 px-2 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
-                    <!-- 區塊 2：開賽區 (預計不用 NOW, 實際要 NOW) -->
+                    <!-- 區塊 2：開賽區 -->
                     <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
                     <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
                     <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
-                    <!-- 區塊 3：比賽與結束區 (預計不用 NOW, 實際/最後成績回報要 NOW) -->
+                    <!-- 區塊 3：比賽與結束區 -->
                     <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
                     <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
                     <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
-                    <!-- 區塊 4：桌次區 (黃) -->
+                    <!-- 區塊 4：桌次區 -->
                     <td class="py-2.5 px-1 bg-amber-50/20">
                         <span class="font-mono font-bold text-base md:text-lg text-slate-700 bg-amber-100/60 px-3 py-1.5 rounded-lg border border-amber-200 inline-block min-w-[70px]">
                             ${gameOverDisplay}
@@ -847,7 +876,15 @@
             const toastMsg = document.getElementById('toastMsg');
             const toastIcon = document.getElementById('toastIcon');
             toastMsg.innerText = msg;
-            toastIcon.className = type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400 text-lg' : 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-lg';
+            } else if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-spinner fa-spin text-indigo-400 text-lg';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            }
+
             toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
             setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'); }, 3000);
         }
