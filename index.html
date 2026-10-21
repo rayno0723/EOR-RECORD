@@ -76,6 +76,17 @@
             -moz-appearance: textfield;
         }
 
+        /* 🛠️ 修正 html2canvas 匯出時 input 內文字與 placeholder 向上跑偏問題 */
+        input {
+            line-height: normal !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            vertical-align: middle !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
         /* 📱 手機窄螢幕微調 RWD layout */
         @media (max-width: 640px) {
             .mobile-compact-padding {
