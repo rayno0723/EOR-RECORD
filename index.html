@@ -211,8 +211,13 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-stretch md:justify-end">
+                    <!-- 帶有確認提示的返回設定按鈕 -->
                     <button onclick="switchToStep1()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
                         <i class="fa-solid fa-arrow-left"></i> 返回設定
+                    </button>
+                    <!-- 🧹 清空輸入內容按鈕 -->
+                    <button onclick="clearCurrentInputs()" class="flex-1 md:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-broom"></i> 清空表格
                     </button>
                     <!-- 第二層匯入 JSON 按鈕 -->
                     <button onclick="triggerImportJson()" class="flex-1 md:flex-initial bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
@@ -227,7 +232,7 @@
                 </div>
             </div>
 
-            <!-- 時間表主要表格（移除內部 max-height 限制與獨立捲動，讓整個外層與網頁能隨手滑動） -->
+            <!-- 時間表主要表格 -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
                     <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1280px]">
@@ -343,6 +348,29 @@
             document.getElementById('dl-mins').innerHTML = mHTML;
         }
 
+        // ---------- 🧹 一鍵清空目前賽事表格內容 ----------
+        function clearCurrentInputs() {
+            if (!currentData.roundsData || currentData.roundsData.length === 0) return;
+            
+            if (confirm('確定要清空目前所有輪次已輸入的時間內容嗎？（賽事設定如日期與地點將保留）')) {
+                currentData.roundsData.forEach(row => {
+                    row.p_announce = '';
+                    row.a_announce = '';
+                    row.p_start = '';
+                    row.a_start = '';
+                    row.all_clear = '';
+                    row.p_round_end = '';
+                });
+
+                saveCurrentData();
+                renderTable();
+                
+                // 隱藏 AI 診斷結果區
+                document.getElementById('aiReportBox').classList.add('hidden');
+                showToast('已清空目前賽事的所有時間內容！');
+            }
+        }
+
         // ---------- 匯入 JSON 檔案功能 ----------
         function triggerImportJson() {
             document.getElementById('importJsonFileInput').click();
@@ -420,7 +448,7 @@
             return null;
         }
 
-        // ---------- 雙模態輸入框 (Datalist + inputmode=numeric + iPad 手勢觸控相容) ----------
+        // ---------- 雙模態輸入框 ----------
         function buildTimeInputHTML(roundIndex, fieldName, value) {
             let [h, m] = value ? value.split(':') : ['', ''];
             
@@ -437,7 +465,6 @@
             `;
         }
 
-        // 失去焦點時自動補零與儲存
         function handleTimeBlur(inputEl, roundIndex, fieldName, type) {
             let val = inputEl.value.replace(/[^0-9]/g, '');
             
@@ -476,7 +503,7 @@
 
         function minutesToTimeStr(totalMinutes) {
             if (totalMinutes === null || isNaN(totalMinutes)) return '--';
-            let normMinutes = (totalMinutes % 1440 + 1440) % 1440; // 處理跨日情況
+            let normMinutes = (totalMinutes % 1440 + 1440) % 1440;
             const h = Math.floor(normMinutes / 60);
             const m = normMinutes % 60;
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -590,7 +617,19 @@
             renderTable();
         }
 
+        // ---------- 返回設定頁面（新增確認二次提示） ----------
         function switchToStep1() {
+            // 檢查是否有填寫任何數據
+            const hasEnteredData = currentData.roundsData && currentData.roundsData.some(r => 
+                r.p_announce || r.a_announce || r.p_start || r.a_start || r.all_clear || r.p_round_end
+            );
+
+            if (hasEnteredData) {
+                if (!confirm('確定要返回賽事設定頁面嗎？（當前輸入的資料均已自動儲存至本機）')) {
+                    return; // 使用者選擇取消，停留在第二層
+                }
+            }
+
             document.getElementById('step2Page').classList.add('hidden');
             document.getElementById('step1Page').classList.remove('hidden');
             renderHistoryList();
@@ -609,17 +648,14 @@
                 const aStartMin = parseToMinutes(row.a_start);
                 const diffStart = (aStartMin !== null && pStartMin !== null) ? (aStartMin - pStartMin) : null;
 
-                // 比賽時間到：自動由「實際開賽」往後推算 25 分鐘
                 const gameOverMin = (aStartMin !== null) ? (aStartMin + 25) : null;
                 const gameOverDisplay = (gameOverMin !== null) ? minutesToTimeStr(gameOverMin) : '--';
 
                 const allClearMin = parseToMinutes(row.all_clear);
                 
-                // 輪內時間差 = 最後成績回報 - 預計輪次結束
                 const pRoundEndMin = parseToMinutes(row.p_round_end);
                 const diffInRound = (allClearMin !== null && pRoundEndMin !== null) ? (allClearMin - pRoundEndMin) : null;
 
-                // 與桌次時間差 = 預計輪次結束 - 最後成績回報
                 const diffTable = (pRoundEndMin !== null && allClearMin !== null) ? (pRoundEndMin - allClearMin) : null;
 
                 const tr = document.createElement('tr');
@@ -639,12 +675,12 @@
                     <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'a_start', row.a_start)}</td>
                     <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
-                    <!-- 區塊 3：比賽與結束區 (紫) (預計輪次結束、最後成績回報) -->
+                    <!-- 區塊 3：比賽與結束區 (紫) -->
                     <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end)}</td>
                     <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'all_clear', row.all_clear)}</td>
                     <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
-                    <!-- 區塊 4：桌次區 (黃) (比賽時間到(自動算+25m)、與桌次時間差) -->
+                    <!-- 區塊 4：桌次區 (黃) -->
                     <td class="py-2.5 px-1 bg-amber-50/20">
                         <span class="font-mono font-bold text-base md:text-lg text-slate-700 bg-amber-100/60 px-3 py-1.5 rounded-lg border border-amber-200 inline-block min-w-[70px]">
                             ${gameOverDisplay}
