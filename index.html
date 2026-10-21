@@ -2,13 +2,13 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>賽事輪次時間紀錄與效率檢核工具</title>
 
     <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="EOR-RECORD">
+    <meta name="apple-mobile-web-app-title" content="賽事計時器">
 
     <!-- 🚫 強制瀏覽器不快取 HTML 頁面 -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -40,37 +40,33 @@
         }
     </script>
     <style>
-        /* 表格固定標頭與凍結第一列 */
+        /* 📱 手機與平板觸控體驗極致優化 */
         .sticky-col {
             position: sticky;
             left: 0;
             z-index: 20;
         }
-        
-        /* 💡 針對 iPad 觸控優化：加大滾動條並確保雙向滑動順暢 */
+
+        /* 順暢雙向滾動條 */
         .custom-scrollbar::-webkit-scrollbar {
-            height: 14px;
-            width: 14px;
+            height: 10px;
+            width: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #e2e8f0;
-            border-radius: 8px;
+            background: #f1f5f9;
+            border-radius: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 8px;
-            border: 3px solid #e2e8f0;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: #cbd5e1;
+            border-radius: 6px;
         }
 
-        /* 💡 讓輸入框穿透觸控事件，手指在輸入框上也能直接滑動頁面 */
+        /* 讓輸入框穿透觸控滑動 */
         .input-touch-pass {
             touch-action: pan-x pan-y;
         }
         
-        /* 隱藏預設的 input number 上下箭頭，保持純數字輸入體驗 */
+        /* 隱藏預設箭頭 */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -78,6 +74,14 @@
         }
         input[type=number] {
             -moz-appearance: textfield;
+        }
+
+        /* 📱 手機窄螢幕微調 RWD layout */
+        @media (max-width: 640px) {
+            .mobile-compact-padding {
+                padding-left: 0.25rem !important;
+                padding-right: 0.25rem !important;
+            }
         }
     </style>
 </head>
@@ -92,60 +96,60 @@
 
     <!-- 頂部 Header -->
     <header class="bg-slate-900 text-white shadow-md border-b border-slate-700 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-sm shrink-0">
-                    <i class="fa-solid fa-stopwatch text-2xl"></i>
+        <div class="max-w-7xl mx-auto px-3.5 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm shrink-0">
+                    <i class="fa-solid fa-stopwatch text-xl md:text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl md:text-2xl font-bold tracking-wide">賽事時間效率檢核系統</h1>
-                    <p class="text-xs md:text-sm text-slate-400">離線本機資料儲存與精準時間落差計算</p>
+                    <h1 class="text-base md:text-2xl font-bold tracking-wide">賽事時間效率檢核系統</h1>
+                    <p class="text-[11px] md:text-sm text-slate-400">離線本機資料儲存與時間落差計算</p>
                 </div>
             </div>
             <div id="statusBadge" class="hidden md:flex items-center gap-2 text-xs md:text-sm bg-slate-800 text-emerald-400 px-3.5 py-1.5 rounded-full border border-slate-700">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                資料已自動儲存至 LocalStorage
+                資料已自動儲存
             </div>
         </div>
     </header>
 
     <!-- 主要內容區 -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-3 md:p-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto p-2 md:p-6">
 
         <!-- 第一層：賽事設定頁面 -->
-        <section id="step1Page" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-md p-5 md:p-8 border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-4 mb-6 gap-3">
+        <section id="step1Page" class="space-y-4 md:space-y-6">
+            <div class="bg-white rounded-2xl shadow-md p-4 md:p-8 border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-4 mb-5 gap-3">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h2 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-sliders text-indigo-600"></i> 新增/設定賽事資訊
                         </h2>
-                        <p class="text-sm md:text-base text-slate-500 mt-1">請填寫基本賽事參數以建立時間表表格，或匯入外部 JSON 檔</p>
+                        <p class="text-xs md:text-base text-slate-500 mt-0.5">填寫賽事參數建立表格，或匯入 JSON 檔</p>
                     </div>
                     <!-- 第一層匯入 JSON 按鈕 -->
-                    <button type="button" onclick="triggerImportJson()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm">
+                    <button type="button" onclick="triggerImportJson()" class="w-full md:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <i class="fa-solid fa-file-import"></i> 匯入外部 JSON 賽事檔
                     </button>
                 </div>
 
-                <form id="configForm" onsubmit="event.preventDefault(); startTournament();" class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                <form id="configForm" onsubmit="event.preventDefault(); startTournament();" class="space-y-4 md:space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-start">
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5">1. 賽事日期</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1">1. 賽事日期</label>
                             <input type="date" id="inputDate" required
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5">2. 地區 / 場館</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1">2. 地區 / 場館</label>
                             <input type="text" id="inputRegion" placeholder="例：台北圓山" maxlength="10" required
-                                class="w-full md:w-56 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                class="w-full md:w-56 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5">3. 賽事種類</label>
-                            <select id="inputType" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1">3. 賽事種類</label>
+                            <select id="inputType" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                 <option value="超級球">超級球 (Great Ball)</option>
                                 <option value="高級球">高級球 (Ultra Ball)</option>
                                 <option value="紀念球">紀念球 (Premier Ball)</option>
@@ -153,13 +157,13 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5">4. 總輪次數</label>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1">4. 總輪次數</label>
                             <input type="number" id="inputRounds" min="1" max="20" value="6" required
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-slate-700 mb-1.5">5. 組別</label>
-                            <select id="inputCategory" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1">5. 組別</label>
+                            <select id="inputCategory" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                 <option value="大師組">大師組</option>
                                 <option value="少年組">少年組</option>
                                 <option value="孩童組">孩童組</option>
@@ -167,7 +171,7 @@
                         </div>
                     </div>
 
-                    <div class="pt-4 flex justify-end">
+                    <div class="pt-2 md:pt-4 flex justify-end">
                         <button type="submit" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-base px-8 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md">
                             <i class="fa-solid fa-table-cells"></i> 產生時間表並開始紀錄
                         </button>
@@ -176,133 +180,133 @@
             </div>
 
             <!-- 歷史紀錄管理 -->
-            <div class="bg-white rounded-2xl shadow-md p-5 md:p-8 border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-4 mb-4 gap-3">
+            <div class="bg-white rounded-2xl shadow-md p-4 md:p-8 border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-3 mb-4 gap-2">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <h3 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-clock-rotate-left text-slate-600"></i> 本機儲存賽事紀錄
                         </h3>
-                        <p class="text-xs md:text-sm text-slate-500 mt-0.5">點擊可重新載入先前的賽事資料或進行管理</p>
+                        <p class="text-xs text-slate-500 mt-0.5">點擊重新載入歷史資料</p>
                     </div>
-                    <button onclick="clearAllHistory()" class="text-sm text-rose-600 hover:text-rose-800 border border-rose-200 hover:bg-rose-50 px-3.5 py-2 rounded-xl transition-colors font-medium">
+                    <button onclick="clearAllHistory()" class="w-full md:w-auto text-xs md:text-sm text-rose-600 hover:text-rose-800 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-colors font-medium text-center">
                         <i class="fa-solid fa-trash-can"></i> 清除所有紀錄
                     </button>
                 </div>
-                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
         </section>
 
         <!-- 第二層：輪次時間表頁面 -->
-        <section id="step2Page" class="space-y-4 hidden">
+        <section id="step2Page" class="space-y-3 md:space-y-4 hidden">
             <!-- 欲截圖匯出的完整區域範圍 id="captureArea" -->
-            <div id="captureArea" class="space-y-4 p-2 bg-slate-100 rounded-2xl">
+            <div id="captureArea" class="space-y-3 md:space-y-4 p-1 md:p-2 bg-slate-100 rounded-2xl">
                 <!-- 頂部資訊欄 -->
-                <div class="bg-white rounded-2xl shadow-md p-4 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div class="space-y-1.5 w-full lg:w-auto">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span id="badgeType" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold text-white bg-slate-700">--</span>
-                            <span id="badgeCategory" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
-                            <span id="badgeRegion" class="px-3 py-1 rounded-full text-xs md:text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                <div class="bg-white rounded-2xl shadow-md p-3.5 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                    <div class="space-y-1 w-full lg:w-auto">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span id="badgeType" class="px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeCategory" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
+                            <span id="badgeRegion" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">
                                 <i class="fa-solid fa-location-dot"></i> <span id="displayRegion">--</span>
                             </span>
-                            <span id="badgeDate" class="text-xs md:text-sm text-slate-500 flex items-center gap-1 ml-1">
+                            <span id="badgeDate" class="text-xs text-slate-500 flex items-center gap-1 ml-0.5">
                                 <i class="fa-regular fa-calendar"></i> <span id="displayDate">--</span>
                             </span>
                         </div>
-                        <h2 class="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-2">
+                        <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
                             賽事時間效率明細表
-                            <span class="text-base font-normal text-slate-500">(共 <span id="displayRounds">0</span> 輪)</span>
+                            <span class="text-sm font-normal text-slate-500">(共 <span id="displayRounds">0</span> 輪)</span>
                         </h2>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-stretch md:justify-end" data-html2canvas-ignore="true">
-                        <!-- 帶有確認提示的返回設定按鈕 -->
-                        <button onclick="switchToStep1()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
+                    <!-- 📱 手機端採 2 欄按鈕網格流線型呈現 -->
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto" data-html2canvas-ignore="true">
+                        <button onclick="switchToStep1()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-300">
                             <i class="fa-solid fa-arrow-left"></i> 返回設定
                         </button>
                         
                         <!-- 🧹 分區清除選擇按鈕 -->
-                        <div class="relative flex-1 md:flex-initial">
-                            <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer appearance-none pr-8 shadow-sm">
+                        <div class="relative">
+                            <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors cursor-pointer appearance-none pr-6 shadow-sm">
                                 <option value="" disabled selected>🧹 清除項目...</option>
-                                <option value="announce">僅清除「配對區」時間</option>
-                                <option value="start">僅清除「開賽區」時間</option>
-                                <option value="end">僅清除「比賽結束區」時間</option>
+                                <option value="announce">僅配對區</option>
+                                <option value="start">僅開賽區</option>
+                                <option value="end">僅比賽結束區</option>
                                 <option value="all">清空全部數據</option>
                             </select>
-                            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-rose-500 pointer-events-none"></i>
+                            <i class="fa-solid fa-chevron-down absolute right-2 top-3 text-[10px] text-rose-500 pointer-events-none"></i>
                         </div>
 
                         <!-- 📷 匯出 PNG 圖片按鈕 -->
-                        <button onclick="exportImage()" class="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <button onclick="exportImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-camera"></i> 匯出圖片
                         </button>
 
                         <!-- 第二層匯入 JSON 按鈕 -->
-                        <button onclick="triggerImportJson()" class="flex-1 md:flex-initial bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <button onclick="triggerImportJson()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-file-import"></i> 匯入 JSON
                         </button>
-                        <button onclick="exportJSON()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
+                        <button onclick="exportJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-300">
                             <i class="fa-solid fa-file-code"></i> 匯出 JSON
                         </button>
-                        <button onclick="exportCSV()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <button onclick="exportCSV()" class="col-span-2 sm:col-span-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-file-csv"></i> 匯出 CSV 報表
                         </button>
                     </div>
                 </div>
 
-                <!-- 時間表主要表格 -->
+                <!-- 時間表主要表格 (📱 手機橫向滾動+凍結第一欄) -->
                 <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
-                        <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1360px]">
-                            <thead class="text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
+                        <table class="w-full text-xs md:text-base text-left border-collapse min-w-[1100px] md:min-w-[1360px]">
+                            <thead class="text-xs md:text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
                                 <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
-                                    <th scope="col" class="py-3 px-3 w-16 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
-                                    <th scope="col" colspan="3" class="py-3 px-2 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <span><i class="fa-solid fa-bullhorn mr-1"></i> 配對公布區</span>
-                                            <button onclick="clearSectionData('announce')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1.5 py-0.5 rounded border border-blue-400/40 transition-colors">
+                                    <th scope="col" class="py-2.5 px-2 w-14 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-bullhorn mr-0.5"></i> 配對公布區</span>
+                                            <button onclick="clearSectionData('announce')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1 py-0.5 rounded border border-blue-400/40 transition-colors">
                                                 <i class="fa-solid fa-eraser"></i>
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="3" class="py-3 px-2 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <span><i class="fa-solid fa-flag-checkered mr-1"></i> 開賽時程區</span>
-                                            <button onclick="clearSectionData('start')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1.5 py-0.5 rounded border border-emerald-400/40 transition-colors">
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-flag-checkered mr-0.5"></i> 開賽時程區</span>
+                                            <button onclick="clearSectionData('start')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1 py-0.5 rounded border border-emerald-400/40 transition-colors">
                                                 <i class="fa-solid fa-eraser"></i>
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="3" class="py-3 px-2 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <span><i class="fa-solid fa-clock mr-1"></i> 比賽與結束區</span>
-                                            <button onclick="clearSectionData('end')" title="清除此區數據" data-html2canvas-ignore="true" class="text-xs bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1.5 py-0.5 rounded border border-purple-400/40 transition-colors">
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-clock mr-0.5"></i> 比賽與結束區</span>
+                                            <button onclick="clearSectionData('end')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1 py-0.5 rounded border border-purple-400/40 transition-colors">
                                                 <i class="fa-solid fa-eraser"></i>
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="2" class="py-3 px-2 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
-                                        <i class="fa-solid fa-hourglass-half mr-1"></i> 桌次時間區
+                                    <th scope="col" colspan="2" class="py-2.5 px-1 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
+                                        <i class="fa-solid fa-hourglass-half mr-0.5"></i> 桌次時間區
                                     </th>
                                 </tr>
-                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200">
-                                    <th class="py-2.5 px-2 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
+                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200 text-[11px] md:text-xs">
+                                    <th class="py-2 px-1 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
                                     
-                                    <th class="py-2.5 px-2 bg-blue-950/40 w-44">預計公布配對</th>
-                                    <th class="py-2.5 px-2 bg-blue-950/40 w-48">實際公布配對</th>
-                                    <th class="py-2.5 px-2 bg-blue-900/60 w-32 text-blue-200">配對時間差</th>
+                                    <th class="py-2 px-1 bg-blue-950/40 w-36 md:w-44">預計公布配對</th>
+                                    <th class="py-2 px-1 bg-blue-950/40 w-40 md:w-48">實際公布配對</th>
+                                    <th class="py-2 px-1 bg-blue-900/60 w-28 md:w-32 text-blue-200">配對時間差</th>
 
-                                    <th class="py-2.5 px-2 bg-emerald-950/40 w-44">預計開賽</th>
-                                    <th class="py-2.5 px-2 bg-emerald-950/40 w-48">實際開賽</th>
-                                    <th class="py-2.5 px-2 bg-emerald-900/60 w-32 text-emerald-200">開賽時間差</th>
+                                    <th class="py-2 px-1 bg-emerald-950/40 w-36 md:w-44">預計開賽</th>
+                                    <th class="py-2 px-1 bg-emerald-950/40 w-40 md:w-48">實際開賽</th>
+                                    <th class="py-2 px-1 bg-emerald-900/60 w-28 md:w-32 text-emerald-200">開賽時間差</th>
 
-                                    <th class="py-2.5 px-2 bg-purple-950/40 w-44">預計輪次結束</th>
-                                    <th class="py-2.5 px-2 bg-purple-950/40 w-48">最後成績回報</th>
-                                    <th class="py-2.5 px-2 bg-purple-900/60 w-32 text-purple-200">輪內時間差</th>
+                                    <th class="py-2 px-1 bg-purple-950/40 w-36 md:w-44">預計輪次結束</th>
+                                    <th class="py-2 px-1 bg-purple-950/40 w-40 md:w-48">最後成績回報</th>
+                                    <th class="py-2 px-1 bg-purple-900/60 w-28 md:w-32 text-purple-200">輪內時間差</th>
 
-                                    <th class="py-2.5 px-2 bg-amber-950/40 w-44">比賽時間到</th>
-                                    <th class="py-2.5 px-2 bg-amber-900/60 w-36 text-amber-200">與桌次時間差</th>
+                                    <th class="py-2 px-1 bg-amber-950/40 w-32 md:w-44">比賽時間到</th>
+                                    <th class="py-2 px-1 bg-amber-900/60 w-32 md:w-36 text-amber-200">與桌次時間差</th>
                                 </tr>
                             </thead>
                             <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
@@ -314,24 +318,24 @@
             </div>
 
             <!-- AI 賽事效率分析 Agent 區塊 -->
-            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-xl p-5 md:p-8 border border-slate-700 mt-6">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-700 pb-4 mb-4 gap-4">
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-xl p-4 md:p-8 border border-slate-700 mt-4 md:mt-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-700 pb-3 mb-3 gap-3">
                     <div>
-                        <h3 class="text-lg md:text-xl font-bold flex items-center gap-2 text-indigo-300">
+                        <h3 class="text-base md:text-xl font-bold flex items-center gap-2 text-indigo-300">
                             <i class="fa-solid fa-robot"></i> AI 賽事效率分析 Agent
                         </h3>
-                        <p class="text-xs md:text-sm text-slate-400 mt-1">智慧診斷延誤連鎖反應，提供賽事管理建議</p>
+                        <p class="text-xs text-slate-400 mt-0.5">智慧診斷延誤連鎖反應，提供賽事管理建議</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="promptApiKey()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-colors border border-slate-600">
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="promptApiKey()" class="flex-1 md:flex-initial bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-xl text-xs md:text-sm font-medium transition-colors border border-slate-600">
                             <i class="fa-solid fa-key"></i> 設定 API Key
                         </button>
-                        <button onclick="runAIAgent()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors shadow-md">
-                            <i class="fa-solid fa-bolt"></i> 執行效率診斷
+                        <button onclick="runAIAgent()" class="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-bold transition-colors shadow-md">
+                            <i class="fa-solid fa-bolt"></i> 執行診斷
                         </button>
                     </div>
                 </div>
-                <div id="aiReportBox" class="hidden bg-slate-800/50 rounded-xl p-4 md:p-6 border border-slate-600">
+                <div id="aiReportBox" class="hidden bg-slate-800/50 rounded-xl p-3 md:p-6 border border-slate-600">
                     <!-- AI 報告內容 -->
                 </div>
             </div>
@@ -341,8 +345,8 @@
     </main>
 
     <!-- 訊息提示 Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md bg-slate-900 text-white text-xs md:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2 justify-center sm:justify-start">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base md:text-lg"></i>
         <span id="toastMsg">提示訊息</span>
     </div>
 
@@ -383,15 +387,16 @@
             document.getElementById('dl-mins').innerHTML = mHTML;
         }
 
-        // ---------- 📷 將表格區域匯出為圖片 (PNG) ----------
+        // ---------- 📷 將表格區域匯出為圖片 (手機自動適應解析度) ----------
         function exportImage() {
             const captureTarget = document.getElementById('captureArea');
             showToast('正在生成賽事報表圖片...', 'info');
 
             html2canvas(captureTarget, {
-                scale: 2, // 提高解析度（2倍清晰度）
+                scale: 2, // 雙倍像素保證手機上看也是高畫質
                 useCORS: true,
-                backgroundColor: '#f1f5f9'
+                backgroundColor: '#f1f5f9',
+                windowWidth: 1400 // 模擬桌面寬度截圖，確保手機下下載圖片格式不變形
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
@@ -520,25 +525,28 @@
             return null;
         }
 
-        // ---------- ⏱️ 雙模態輸入框 ----------
+        // ---------- 📱 手機優化版雙模態輸入框 ----------
         function buildTimeInputHTML(roundIndex, fieldName, value, showNowButton = false) {
             let [h, m] = value ? value.split(':') : ['', ''];
             
             return `
-                <div class="flex items-center justify-center gap-1">
+                <div class="flex items-center justify-center gap-0.5 md:gap-1">
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-hours" maxlength="2" placeholder="時" value="${h}"
+                           onfocus="this.select()"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'h')"
-                           class="w-12 bg-white border border-slate-300 rounded-lg px-1.5 py-1 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
-                    <span class="text-slate-400 font-bold text-sm md:text-base">:</span>
+                           class="w-10 md:w-12 bg-white border border-slate-300 rounded-md md:rounded-lg px-1 py-1 text-center text-xs md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                    <span class="text-slate-300 font-bold text-xs md:text-sm">:</span>
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-mins" maxlength="2" placeholder="分" value="${m}"
+                           onfocus="this.select()"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'm')"
-                           class="w-12 bg-white border border-slate-300 rounded-lg px-1.5 py-1 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                           class="w-10 md:w-12 bg-white border border-slate-300 rounded-md md:rounded-lg px-1 py-1 text-center text-xs md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
                     
                     ${showNowButton ? `
                         <button type="button" onclick="fillNowTime(${roundIndex}, '${fieldName}')" 
                                 title="填入現在時間" data-html2canvas-ignore="true"
-                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-xs px-1.5 py-1 rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95">
-                            NOW
+                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-[10px] md:text-xs px-1.5 py-1 rounded-md md:rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95">
+                            <span class="hidden md:inline">NOW</span>
+                            <span class="md:hidden"><i class="fa-solid fa-bolt text-[9px]"></i></span>
                         </button>
                     ` : ''}
                 </div>
@@ -602,14 +610,14 @@
 
         function formatDiffBadge(diffMinutes, isInvertedLogic = false) {
             if (diffMinutes === null) {
-                return `<span class="text-slate-300 font-mono text-sm">--</span>`;
+                return `<span class="text-slate-300 font-mono text-xs md:text-sm">--</span>`;
             }
 
             let text = `${diffMinutes > 0 ? '+' : ''}${diffMinutes} 分`;
             let colorClass = 'bg-slate-100 text-slate-700 border-slate-300';
 
             if (diffMinutes === 0) {
-                text = '0 分 (準時)';
+                text = '準時';
                 colorClass = 'bg-slate-100 text-slate-600 border-slate-300';
             } else if (!isInvertedLogic) {
                 if (diffMinutes > 0) {
@@ -625,7 +633,7 @@
                 }
             }
 
-            return `<span class="inline-block px-2.5 py-1 rounded-lg border text-xs md:text-sm ${colorClass}">${text}</span>`;
+            return `<span class="inline-block px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-md md:rounded-lg border text-[11px] md:text-sm ${colorClass}">${text}</span>`;
         }
 
         function startTournament() {
@@ -664,7 +672,7 @@
             if (allHistory[id]) {
                 currentData = allHistory[id];
                 switchToStep2();
-                showToast(`已載入賽事：${currentData.config.region} (${currentData.config.category})`);
+                showToast(`已載入賽事：${currentData.config.region}`);
             }
         }
 
@@ -696,7 +704,7 @@
             document.getElementById('badgeType').innerText = conf.type;
 
             const badgeType = document.getElementById('badgeType');
-            badgeType.className = 'px-3 py-1 rounded-full text-xs md:text-sm font-bold text-white ';
+            badgeType.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold text-white ';
             switch (conf.type) {
                 case '超級球': badgeType.classList.add('bg-blue-600'); break;
                 case '高級球': badgeType.classList.add('bg-amber-500'); break;
@@ -714,7 +722,7 @@
             );
 
             if (hasEnteredData) {
-                if (!confirm('確定要返回賽事設定頁面嗎？（當前輸入的資料均已自動儲存至本機）')) {
+                if (!confirm('確定要返回賽事設定頁面嗎？（資料已自動儲存）')) {
                     return;
                 }
             }
@@ -751,31 +759,31 @@
                 tr.className = 'hover:bg-slate-50 border-b border-slate-200 text-center divide-x divide-slate-100';
 
                 tr.innerHTML = `
-                    <td class="py-3 px-2 font-extrabold text-base md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
+                    <td class="py-2.5 px-1 font-black text-sm md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
                         R${row.roundNum}
                     </td>
                     <!-- 區塊 1：配對區 -->
-                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
-                    <td class="py-2.5 px-1 bg-blue-50/20">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
-                    <td class="py-2.5 px-2 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
+                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
+                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
+                    <td class="py-2 px-1 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
                     <!-- 區塊 2：開賽區 -->
-                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
-                    <td class="py-2.5 px-1 bg-emerald-50/20">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
-                    <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
+                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
+                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
+                    <td class="py-2 px-1 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
                     <!-- 區塊 3：比賽與結束區 -->
-                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
-                    <td class="py-2.5 px-1 bg-purple-50/20">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
-                    <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
+                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
+                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
+                    <td class="py-2 px-1 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
                     <!-- 區塊 4：桌次區 -->
-                    <td class="py-2.5 px-1 bg-amber-50/20">
-                        <span class="font-mono font-bold text-base md:text-lg text-slate-700 bg-amber-100/60 px-3 py-1.5 rounded-lg border border-amber-200 inline-block min-w-[70px]">
+                    <td class="py-2 px-1 bg-amber-50/20">
+                        <span class="font-mono font-bold text-xs md:text-lg text-slate-700 bg-amber-100/60 px-2 py-1 rounded-md md:rounded-lg border border-amber-200 inline-block min-w-[55px] md:min-w-[70px]">
                             ${gameOverDisplay}
                         </span>
                     </td>
-                    <td class="py-2.5 px-2 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
+                    <td class="py-2 px-1 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
                 `;
 
                 tbody.appendChild(tr);
@@ -788,7 +796,7 @@
             const keys = Object.keys(history).sort().reverse();
 
             if (keys.length === 0) {
-                container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300"><i class="fa-solid fa-folder-open text-3xl mb-2 block"></i>尚無本機歷史賽事紀錄</div>`;
+                container.innerHTML = `<div class="col-span-full py-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs md:text-sm"><i class="fa-solid fa-folder-open text-2xl mb-1 block"></i>尚無本機歷史賽事紀錄</div>`;
                 return;
             }
 
@@ -796,17 +804,17 @@
                 const item = history[key];
                 const conf = item.config;
                 return `
-                    <div class="border border-slate-200 hover:border-indigo-300 rounded-xl p-4 bg-slate-50 hover:bg-indigo-50/30 transition-all flex justify-between items-start group shadow-sm">
-                        <div class="space-y-1.5 cursor-pointer flex-grow" onclick="loadTournament('${item.id}')">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-white">${conf.type}</span>
-                                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-700">${conf.category}</span>
+                    <div class="border border-slate-200 hover:border-indigo-300 rounded-xl p-3 bg-slate-50 hover:bg-indigo-50/30 transition-all flex justify-between items-start group shadow-sm">
+                        <div class="space-y-1 cursor-pointer flex-grow" onclick="loadTournament('${item.id}')">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white">${conf.type}</span>
+                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">${conf.category}</span>
                             </div>
-                            <h4 class="font-bold text-slate-800 text-base group-hover:text-indigo-600 transition-colors">${conf.region} 賽事</h4>
-                            <p class="text-xs md:text-sm text-slate-500">日期：${conf.date} | 總輪次：R${conf.rounds}</p>
+                            <h4 class="font-bold text-slate-800 text-sm md:text-base group-hover:text-indigo-600 transition-colors">${conf.region} 賽事</h4>
+                            <p class="text-[11px] text-slate-500">日期：${conf.date} | 總輪次：R${conf.rounds}</p>
                         </div>
-                        <button onclick="deleteHistory('${item.id}', event)" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-colors" title="刪除本筆紀錄">
-                            <i class="fa-solid fa-trash-can"></i>
+                        <button onclick="deleteHistory('${item.id}', event)" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors" title="刪除紀錄">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
                     </div>
                 `;
@@ -815,12 +823,12 @@
 
         function deleteHistory(id, e) {
             e.stopPropagation();
-            if (confirm('確定要刪除這筆賽事紀錄嗎？此動作無法復原。')) {
+            if (confirm('確定要刪除這筆賽事紀錄嗎？')) {
                 const history = getAllHistory();
                 delete history[id];
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
                 renderHistoryList();
-                showToast('已成功刪除紀錄');
+                showToast('已刪除紀錄');
             }
         }
 
@@ -868,7 +876,7 @@
             document.body.appendChild(link);
             link.click();
             link.remove();
-            showToast('已成功匯出 CSV 報表！');
+            showToast('已匯出 CSV 報表！');
         }
 
         function showToast(msg, type = 'success') {
@@ -878,11 +886,11 @@
             toastMsg.innerText = msg;
             
             if (type === 'error') {
-                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-lg';
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-base md:text-lg';
             } else if (type === 'info') {
-                toastIcon.className = 'fa-solid fa-spinner fa-spin text-indigo-400 text-lg';
+                toastIcon.className = 'fa-solid fa-spinner fa-spin text-indigo-400 text-base md:text-lg';
             } else {
-                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base md:text-lg';
             }
 
             toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
@@ -892,7 +900,7 @@
         // --- AI Agent 邏輯 ---
         function promptApiKey() {
             const currentKey = localStorage.getItem(API_KEY_STORE) || '';
-            const newKey = prompt('設定 Gemini API Key (留空則使用本機離線規則引擎):', currentKey);
+            const newKey = prompt('設定 Gemini API Key (留空使用離線規則引擎):', currentKey);
             if (newKey !== null) {
                 localStorage.setItem(API_KEY_STORE, newKey.trim());
                 showToast(newKey.trim() ? '已儲存 API Key' : '已切換為離線引擎');
@@ -902,7 +910,7 @@
         async function runAIAgent() {
             const box = document.getElementById('aiReportBox');
             box.classList.remove('hidden');
-            box.innerHTML = `<div class="flex items-center gap-2 text-indigo-400 animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> AI 正在分析賽事時間落差，請稍候...</div>`;
+            box.innerHTML = `<div class="flex items-center gap-2 text-indigo-400 text-xs md:text-sm animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> AI 正在分析賽事時間落差...</div>`;
             
             const apiKey = localStorage.getItem(API_KEY_STORE);
             if (!apiKey) {
@@ -910,9 +918,9 @@
             } else {
                 try {
                     const res = await callGemini(apiKey);
-                    box.innerHTML = `<div class="text-sm md:text-base whitespace-pre-wrap text-slate-300 leading-relaxed">${res}</div>`;
+                    box.innerHTML = `<div class="text-xs md:text-base whitespace-pre-wrap text-slate-300 leading-relaxed">${res}</div>`;
                 } catch (e) {
-                    box.innerHTML = `<div class="text-rose-400 mb-3"><i class="fa-solid fa-triangle-exclamation"></i> API 連線失敗，已自動切換為離線分析。</div>` + generateOfflineReport();
+                    box.innerHTML = `<div class="text-rose-400 mb-2 text-xs md:text-sm"><i class="fa-solid fa-triangle-exclamation"></i> API 連線失敗，已切換為離線分析。</div>` + generateOfflineReport();
                 }
             }
         }
@@ -929,22 +937,22 @@
             });
             let health = Math.max(30, 100 - (totalDelay * 2));
             return `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600">
-                        <div class="text-xs text-slate-400">賽事健康度 (離線評估)</div>
-                        <div class="text-2xl font-black text-emerald-400 mt-1">${health} <span class="text-base text-slate-500">/100</span></div>
+                <div class="grid grid-cols-3 gap-2 md:gap-4 mb-3">
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">賽事健康度</div>
+                        <div class="text-lg md:text-2xl font-black text-emerald-400 mt-0.5">${health} <span class="text-xs text-slate-500">/100</span></div>
                     </div>
-                    <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600">
-                        <div class="text-xs text-slate-400">總開賽延遲</div>
-                        <div class="text-2xl font-black text-rose-400 mt-1">${totalDelay} <span class="text-base text-slate-500">分鐘</span></div>
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">總開賽延遲</div>
+                        <div class="text-lg md:text-2xl font-black text-rose-400 mt-0.5">${totalDelay} <span class="text-xs text-slate-500">分</span></div>
                     </div>
-                    <div class="bg-slate-700/50 p-4 rounded-xl border border-slate-600">
-                        <div class="text-xs text-slate-400">最大延遲輪次</div>
-                        <div class="text-2xl font-black text-amber-400 mt-1">${worstRound !== -1 ? 'R'+worstRound : '無'} <span class="text-base text-slate-500">(${maxDelay>0?'+'+maxDelay:'0'}分)</span></div>
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">最大延遲輪次</div>
+                        <div class="text-lg md:text-2xl font-black text-amber-400 mt-0.5">${worstRound !== -1 ? 'R'+worstRound : '無'} <span class="text-xs text-slate-500">(${maxDelay>0?'+'+maxDelay:'0'}分)</span></div>
                     </div>
                 </div>
-                <h4 class="font-bold text-indigo-300 mb-2">💡 改善建議：</h4>
-                <p class="text-sm text-slate-300">${totalDelay > 10 ? '開賽延後累積較多，建議加強最後成績回報與桌次催局，並提早公佈配對。' : '目前賽事節奏控制優良，請繼續保持！'}</p>
+                <h4 class="font-bold text-indigo-300 text-xs md:text-sm mb-1">💡 改善建議：</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">${totalDelay > 10 ? '開賽延後累積較多，建議加強最後成績回報與桌次催局，並提早公佈配對。' : '目前賽事節奏控制優良，請繼續保持！'}</p>
             `;
         }
 
