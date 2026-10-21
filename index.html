@@ -215,10 +215,19 @@
                     <button onclick="switchToStep1()" class="flex-1 md:flex-initial bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 border border-slate-300">
                         <i class="fa-solid fa-arrow-left"></i> 返回設定
                     </button>
-                    <!-- 🧹 清空輸入內容按鈕 -->
-                    <button onclick="clearCurrentInputs()" class="flex-1 md:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-broom"></i> 清空表格
-                    </button>
+                    
+                    <!-- 🧹 分區清除選擇按鈕 -->
+                    <div class="relative flex-1 md:flex-initial">
+                        <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer appearance-none pr-8 shadow-sm">
+                            <option value="" disabled selected>🧹 清除項目...</option>
+                            <option value="announce">僅清除「配對區」時間</option>
+                            <option value="start">僅清除「開賽區」時間</option>
+                            <option value="end">僅清除「比賽結束區」時間</option>
+                            <option value="all">清空全部數據</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-xs text-rose-500 pointer-events-none"></i>
+                    </div>
+
                     <!-- 第二層匯入 JSON 按鈕 -->
                     <button onclick="triggerImportJson()" class="flex-1 md:flex-initial bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <i class="fa-solid fa-file-import"></i> 匯入 JSON
@@ -240,13 +249,28 @@
                             <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
                                 <th scope="col" class="py-3 px-3 w-16 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
                                 <th scope="col" colspan="3" class="py-3 px-2 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
-                                    <i class="fa-solid fa-bullhorn mr-1"></i> 配對公布區
+                                    <div class="flex items-center justify-center gap-2">
+                                        <span><i class="fa-solid fa-bullhorn mr-1"></i> 配對公布區</span>
+                                        <button onclick="clearSectionData('announce')" title="清除此區數據" class="text-xs bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1.5 py-0.5 rounded border border-blue-400/40 transition-colors">
+                                            <i class="fa-solid fa-eraser"></i>
+                                        </button>
+                                    </div>
                                 </th>
                                 <th scope="col" colspan="3" class="py-3 px-2 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
-                                    <i class="fa-solid fa-flag-checkered mr-1"></i> 開賽時程區
+                                    <div class="flex items-center justify-center gap-2">
+                                        <span><i class="fa-solid fa-flag-checkered mr-1"></i> 開賽時程區</span>
+                                        <button onclick="clearSectionData('start')" title="清除此區數據" class="text-xs bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1.5 py-0.5 rounded border border-emerald-400/40 transition-colors">
+                                            <i class="fa-solid fa-eraser"></i>
+                                        </button>
+                                    </div>
                                 </th>
                                 <th scope="col" colspan="3" class="py-3 px-2 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
-                                    <i class="fa-solid fa-clock mr-1"></i> 比賽與結束區
+                                    <div class="flex items-center justify-center gap-2">
+                                        <span><i class="fa-solid fa-clock mr-1"></i> 比賽與結束區</span>
+                                        <button onclick="clearSectionData('end')" title="清除此區數據" class="text-xs bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1.5 py-0.5 rounded border border-purple-400/40 transition-colors">
+                                            <i class="fa-solid fa-eraser"></i>
+                                        </button>
+                                    </div>
                                 </th>
                                 <th scope="col" colspan="2" class="py-3 px-2 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
                                     <i class="fa-solid fa-hourglass-half mr-1"></i> 桌次時間區
@@ -348,26 +372,43 @@
             document.getElementById('dl-mins').innerHTML = mHTML;
         }
 
-        // ---------- 🧹 一鍵清空目前賽事表格內容 ----------
-        function clearCurrentInputs() {
+        // ---------- 🧹 下拉選單處理分區清除 ----------
+        function handleClearSection(selectEl) {
+            const type = selectEl.value;
+            if (!type) return;
+            clearSectionData(type);
+            selectEl.selectedIndex = 0; // 重置下拉選單
+        }
+
+        // 執行分區清除核心邏輯
+        function clearSectionData(type) {
             if (!currentData.roundsData || currentData.roundsData.length === 0) return;
-            
-            if (confirm('確定要清空目前所有輪次已輸入的時間內容嗎？（賽事設定如日期與地點將保留）')) {
+
+            let labelName = '';
+            if (type === 'announce') labelName = '「配對公布區」';
+            else if (type === 'start') labelName = '「開賽時程區」';
+            else if (type === 'end') labelName = '「比賽與結束區」';
+            else if (type === 'all') labelName = '「全部時間」';
+
+            if (confirm(`確定要清除所有輪次的 ${labelName} 資料嗎？`)) {
                 currentData.roundsData.forEach(row => {
-                    row.p_announce = '';
-                    row.a_announce = '';
-                    row.p_start = '';
-                    row.a_start = '';
-                    row.all_clear = '';
-                    row.p_round_end = '';
+                    if (type === 'announce' || type === 'all') {
+                        row.p_announce = '';
+                        row.a_announce = '';
+                    }
+                    if (type === 'start' || type === 'all') {
+                        row.p_start = '';
+                        row.a_start = '';
+                    }
+                    if (type === 'end' || type === 'all') {
+                        row.all_clear = '';
+                        row.p_round_end = '';
+                    }
                 });
 
                 saveCurrentData();
                 renderTable();
-                
-                // 隱藏 AI 診斷結果區
-                document.getElementById('aiReportBox').classList.add('hidden');
-                showToast('已清空目前賽事的所有時間內容！');
+                showToast(`已清空 ${labelName} 資料`);
             }
         }
 
@@ -617,16 +658,15 @@
             renderTable();
         }
 
-        // ---------- 返回設定頁面（新增確認二次提示） ----------
+        // ---------- 返回設定頁面（確認二次提示） ----------
         function switchToStep1() {
-            // 檢查是否有填寫任何數據
             const hasEnteredData = currentData.roundsData && currentData.roundsData.some(r => 
                 r.p_announce || r.a_announce || r.p_start || r.a_start || r.all_clear || r.p_round_end
             );
 
             if (hasEnteredData) {
                 if (!confirm('確定要返回賽事設定頁面嗎？（當前輸入的資料均已自動儲存至本機）')) {
-                    return; // 使用者選擇取消，停留在第二層
+                    return;
                 }
             }
 
