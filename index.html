@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>賽事輪次時間紀錄與效率檢核工具</title>
+    <title>賽事輪次時間紀錄與效率檢核工具 (含 AI 效率診斷 Agent)</title>
 
-    <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 (當透過主畫面捷徑開啟時自動生效) -->
+    <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="賽事計時器">
@@ -19,6 +19,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script>
         tailwind.config = {
             theme: {
@@ -66,7 +67,6 @@
             z-index: 40;
         }
 
-        /* 輸入框 Hover/Focus 動畫 */
         .select-box-wrapper {
             transition: all 0.15s ease-in-out;
         }
@@ -74,6 +74,11 @@
             border-color: #4f46e5;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
         }
+
+        /* Markdown 解析樣式微調 */
+        .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .prose ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; }
+        .prose h3 { font-weight: 800; font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col text-base antialiased selection:bg-indigo-500 selection:text-white">
@@ -82,20 +87,32 @@
     <header class="bg-slate-900 text-white shadow-lg border-b border-slate-800 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3.5 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 text-white p-2.5 rounded-2xl shadow-md shrink-0 flex items-center justify-center">
-                    <i class="fa-solid fa-stopwatch text-2xl md:text-3xl"></i>
+                <div class="bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white p-2.5 rounded-2xl shadow-md shrink-0 flex items-center justify-center">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xl md:text-2xl animate-pulse"></i>
                 </div>
                 <div>
                     <h1 class="text-xl md:text-2xl font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-300">
                         賽事時間效率檢核系統
                     </h1>
-                    <p class="text-xs md:text-sm text-slate-400 font-medium">離線本機儲存 · 自動時間差精算 · 離線匯出</p>
+                    <p class="text-xs md:text-sm text-slate-400 font-medium flex items-center gap-2">
+                        <span>離線本機數據儲存</span>
+                        <span class="text-slate-600">•</span>
+                        <span class="text-indigo-300 flex items-center gap-1">
+                            <i class="fa-solid fa-robot"></i> 嵌入式 AI Agent
+                        </span>
+                    </p>
                 </div>
             </div>
             
-            <div id="statusBadge" class="hidden sm:flex items-center gap-2 text-xs md:text-sm bg-slate-800/80 text-emerald-400 px-3.5 py-2 rounded-full border border-slate-700/60 backdrop-blur">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>LocalStorage 自動儲存中</span>
+            <div class="flex items-center gap-3">
+                <button onclick="openApiKeyModal()" class="text-xs md:text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-xl border border-slate-700/80 transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-key text-amber-400"></i>
+                    <span id="apiKeyBtnText">設定 API Key</span>
+                </button>
+                <div id="statusBadge" class="hidden sm:flex items-center gap-2 text-xs md:text-sm bg-slate-800/80 text-emerald-400 px-3.5 py-2 rounded-full border border-slate-700/60 backdrop-blur">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>自動儲存中</span>
+                </div>
             </div>
         </div>
     </header>
@@ -184,7 +201,7 @@
                         <h3 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-box-archive text-slate-500"></i> 本機歷史賽事紀錄
                         </h3>
-                        <p class="text-xs md:text-sm text-slate-500 mt-0.5">點擊卡片可隨時載入進行檢視或修改</p>
+                        <p class="text-xs md:text-sm text-slate-500 mt-0.5">點擊卡片可隨時載入進行檢視、修改或 AI 分析</p>
                     </div>
                     <button onclick="clearAllHistory()" class="text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-200 px-4 py-2 rounded-xl transition-all font-semibold flex items-center gap-1.5">
                         <i class="fa-solid fa-trash-can"></i> 清除所有歷史
@@ -225,6 +242,35 @@
                     </button>
                     <button onclick="exportCSV()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-5 py-2.5 rounded-2xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-100">
                         <i class="fa-solid fa-file-excel text-base"></i> 匯出 CSV 報表
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🤖 AI 賽事效率分析 Agent 功能卡片區塊 -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 rounded-3xl p-5 md:p-6 text-white shadow-xl border border-indigo-500/30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="space-y-2 relative z-10 max-w-2xl">
+                    <div class="flex items-center gap-2.5">
+                        <span class="bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-microchip"></i> Analytics Module
+                        </span>
+                        <span id="agentModeBadge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                            離線規則引擎模式
+                        </span>
+                    </div>
+                    <h3 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                        <span>AI 賽事效率診斷 Agent</span>
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
+                        自動分析各輪次配對延遲、死鬥拖拖耗時與桌次清理效率。無 API Key 時自動執行離線規則引擎診斷；輸入 API Key 即刻解鎖 Gemini 智慧深度歸因與改善對話！
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-3 relative z-10 shrink-0">
+                    <button onclick="runAiAnalysis()" class="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-extrabold px-6 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-2.5 transition-all text-base hover:scale-102 active:scale-98">
+                        <i class="fa-solid fa-brain text-xl text-indigo-200"></i>
+                        <span>執行 AI 賽事效率診斷</span>
                     </button>
                 </div>
             </div>
@@ -347,6 +393,109 @@
 
     </main>
 
+    <!-- ==================== Modals 彈窗區 ==================== -->
+
+    <!-- API Key 設定 Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-500"></i> 設定 Gemini API Key
+                </h3>
+                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                輸入 Gemini API Key 後可解鎖高階 LLM 賽事深度分析、瓶頸連鎖反應歸因與裁判人力調配對話建議。鑰匙將安全存於您的瀏覽器 LocalStorage 中。
+            </p>
+
+            <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-slate-700">API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="AIzaSy..." 
+                    class="w-full bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="flex items-center justify-between gap-3 pt-2">
+                <button onclick="removeApiKey()" class="text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl font-bold">
+                    清除密鑰 (恢復離線模式)
+                </button>
+                <button onclick="saveApiKey()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-md">
+                    儲存 Key
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 分析診斷與對話 Modal -->
+    <div id="aiModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <!-- Modal 表頭 -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl text-white">
+                        <i class="fa-solid fa-brain text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg md:text-xl font-black flex items-center gap-2">
+                            <span>賽事運作效率 AI 診斷報告</span>
+                        </h3>
+                        <p id="aiModalSubtitle" class="text-xs text-slate-400">離線規則引擎自動分析中...</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="exportAiReport()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl border border-slate-700 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> 匯出報告
+                    </button>
+                    <button onclick="closeAiModal()" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal 內容 (可滾動區) -->
+            <div class="flex-grow overflow-y-auto p-5 sm:p-6 space-y-6 no-scrollbar">
+                <!-- 讀取 Loading 畫面 -->
+                <div id="aiLoading" class="py-12 flex flex-col items-center justify-center space-y-4">
+                    <div class="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p class="text-slate-600 font-bold text-sm sm:text-base animate-pulse">AI Agent 正在精算各輪次數據並推演低效成因...</p>
+                </div>
+
+                <!-- 診斷報告展現區 -->
+                <div id="aiReportContainer" class="space-y-6 hidden">
+                    <!-- 健康度總評與核心數據 -->
+                    <div id="aiSummaryHeader" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- 動態內容 -->
+                    </div>
+
+                    <!-- 診斷詳情 Markdown/HTML 渲染區 -->
+                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-slate-800 prose max-w-none text-sm md:text-base" id="aiReportText">
+                        <!-- 動態報告內容 -->
+                    </div>
+
+                    <!-- 互動對話問答區 (僅在 Gemini LLM 模式啟用) -->
+                    <div id="aiChatSection" class="border-t border-slate-200 pt-5 space-y-3 hidden">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-comments text-indigo-600"></i> 與 Gemini AI 顧問方針研討
+                        </h4>
+                        <div id="chatHistory" class="space-y-2.5 max-h-48 overflow-y-auto p-3 bg-slate-100 rounded-2xl text-xs sm:text-sm">
+                            <div class="text-slate-500 italic">對話已建立，您可以針對當前賽事瓶頸追問（例如：「如何改善 R3 拖桌擠壓情況？」）</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="userQueryInput" placeholder="請輸入對賽事數據的疑問..." 
+                                class="flex-grow bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button onclick="sendUserQuery()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shrink-0">
+                                發送
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast 提示訊息彈窗 -->
     <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white text-sm md:text-base px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-3">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
@@ -356,6 +505,7 @@
     <!-- JavaScript 核心邏輯 -->
     <script>
         const STORAGE_KEY = 'TOURNAMENT_TIMER_DATA_V2';
+        const API_KEY_STORAGE = 'GEMINI_API_KEY_TIMER';
         
         let currentData = {
             id: null,
@@ -369,15 +519,15 @@
             roundsData: []
         };
 
+        let lastAiReportText = "";
+
         window.onload = function() {
             document.getElementById('inputDate').value = currentData.config.date;
             renderHistoryList();
+            updateApiKeyUI();
         };
 
-        /**
-         * 建立徹底解決字體遮擋的時間下拉選單 HTML
-         * 使用帶有固定 Padding 與獨立右側 SVG 小箭頭的造型設計
-         */
+        // 建立時間選取下拉選單
         function buildTimePickerHTML(roundIndex, fieldName, value) {
             let selectedH = '';
             let selectedM = '';
@@ -402,7 +552,6 @@
 
             return `
                 <div class="flex items-center justify-center gap-1 w-full max-w-[160px] mx-auto">
-                    <!-- 時下拉選單 -->
                     <div class="relative flex-1 select-box-wrapper bg-slate-50 border border-slate-300 rounded-xl overflow-hidden">
                         <select onchange="onTimeChange(${roundIndex}, '${fieldName}', 'h', this.value)" 
                                 class="custom-select w-full bg-transparent py-2 pl-2.5 pr-5 text-base font-black text-slate-800 text-center font-mono cursor-pointer focus:outline-none min-h-[44px]">
@@ -415,7 +564,6 @@
 
                     <span class="text-slate-400 font-extrabold text-lg px-0.5">:</span>
 
-                    <!-- 分下拉選單 -->
                     <div class="relative flex-1 select-box-wrapper bg-slate-50 border border-slate-300 rounded-xl overflow-hidden">
                         <select onchange="onTimeChange(${roundIndex}, '${fieldName}', 'm', this.value)" 
                                 class="custom-select w-full bg-transparent py-2 pl-2.5 pr-5 text-base font-black text-slate-800 text-center font-mono cursor-pointer focus:outline-none min-h-[44px]">
@@ -426,7 +574,6 @@
                         </div>
                     </div>
 
-                    <!-- 一鍵當前時間 Fill Icon (僅針對實際項目) -->
                     ${fieldName.startsWith('a_') || fieldName === 'all_clear' ? `
                         <button onclick="setCurrentTime(${roundIndex}, '${fieldName}')" 
                                 title="填入當前時間" 
@@ -438,7 +585,6 @@
             `;
         }
 
-        // 當前時間填寫快速鍵
         function setCurrentTime(roundIndex, fieldName) {
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
@@ -449,7 +595,6 @@
             showToast(`已更新 R${roundIndex + 1} 時間為 ${hh}:${mm}`);
         }
 
-        // 時間選取更新事件
         function onTimeChange(roundIndex, fieldName, type, val) {
             let currentVal = currentData.roundsData[roundIndex][fieldName] || '';
             let [h, m] = currentVal.includes(':') ? currentVal.split(':') : ['', ''];
@@ -457,17 +602,11 @@
             if (type === 'h') h = val;
             if (type === 'm') m = val;
 
-            if (h !== '' && m !== '') {
-                currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
-            } else {
-                currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
-            }
-
+            currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
             saveCurrentData();
             renderTable();
         }
 
-        // 將 HH:mm 時間轉為當天總分鐘數
         function parseToMinutes(timeStr) {
             if (!timeStr || !timeStr.includes(':')) return null;
             const parts = timeStr.split(':');
@@ -478,7 +617,6 @@
             return h * 60 + m;
         }
 
-        // 格式化時間差膠囊標籤
         function formatDiffBadge(diffMinutes, isInvertedLogic = false) {
             if (diffMinutes === null) {
                 return `<span class="text-slate-300 font-mono font-medium text-sm">--</span>`;
@@ -491,14 +629,12 @@
                 text = '0 分 (準時)';
                 colorClass = 'bg-slate-100 text-slate-700 border-slate-300 font-bold';
             } else if (!isInvertedLogic) {
-                // 一般邏輯：> 0 延遲（紅），< 0 提前（綠）
                 if (diffMinutes > 0) {
                     colorClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
                 } else {
                     colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
                 }
             } else {
-                // 反轉邏輯（與桌次時間差）：預計結束 - 完全結束。> 0 表示提前清空（綠），< 0 表示超越預期（紅）
                 if (diffMinutes > 0) {
                     colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
                 } else {
@@ -509,7 +645,6 @@
             return `<span class="inline-block px-3 py-1.5 rounded-xl border text-sm font-mono tracking-tight shadow-sm ${colorClass}">${text}</span>`;
         }
 
-        // 開始賽事（建立新專案）
         function startTournament() {
             const date = document.getElementById('inputDate').value;
             const region = document.getElementById('inputRegion').value.trim();
@@ -603,7 +738,6 @@
             renderHistoryList();
         }
 
-        // 渲染主要紀錄表格 (輪次改標為 R1, R2, R3...)
         function renderTable() {
             const tbody = document.getElementById('scheduleTbody');
             tbody.innerHTML = '';
@@ -628,27 +762,22 @@
                 tr.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-200/80 text-center divide-x divide-slate-100';
 
                 tr.innerHTML = `
-                    <!-- 固定第一欄：輪次 (R1, R2, R3...) -->
                     <td class="py-3 px-2 font-black text-lg md:text-xl bg-slate-100/90 text-indigo-900 sticky-col border-r border-slate-200/90 shadow-sm font-mono">
                         R${row.roundNum}
                     </td>
 
-                    <!-- 區塊 1：配對區 (藍) -->
                     <td class="py-2.5 px-1.5 bg-blue-50/20">${buildTimePickerHTML(idx, 'p_announce', row.p_announce)}</td>
                     <td class="py-2.5 px-1.5 bg-blue-50/20">${buildTimePickerHTML(idx, 'a_announce', row.a_announce)}</td>
                     <td class="py-2.5 px-2 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
-                    <!-- 區塊 2：開賽區 (綠) -->
                     <td class="py-2.5 px-1.5 bg-emerald-50/20">${buildTimePickerHTML(idx, 'p_start', row.p_start)}</td>
                     <td class="py-2.5 px-1.5 bg-emerald-50/20">${buildTimePickerHTML(idx, 'a_start', row.a_start)}</td>
                     <td class="py-2.5 px-2 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
-                    <!-- 區塊 3：比賽與結束區 (紫) -->
                     <td class="py-2.5 px-1.5 bg-purple-50/20">${buildTimePickerHTML(idx, 'game_over', row.game_over)}</td>
                     <td class="py-2.5 px-1.5 bg-purple-50/20">${buildTimePickerHTML(idx, 'all_clear', row.all_clear)}</td>
                     <td class="py-2.5 px-2 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
-                    <!-- 區塊 4：賽程進度/桌次區 (黃) -->
                     <td class="py-2.5 px-1.5 bg-amber-50/20">${buildTimePickerHTML(idx, 'p_round_end', row.p_round_end)}</td>
                     <td class="py-2.5 px-2 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
                 `;
@@ -657,7 +786,6 @@
             });
         }
 
-        // 渲染歷史清單
         function renderHistoryList() {
             const container = document.getElementById('historyList');
             const history = getAllHistory();
@@ -711,6 +839,322 @@
                 renderHistoryList();
                 showToast('已清除所有紀錄');
             }
+        }
+
+        // ==================== AI AGENT 分析模組邏輯 ====================
+
+        function openApiKeyModal() {
+            const key = localStorage.getItem(API_KEY_STORAGE) || '';
+            document.getElementById('apiKeyInput').value = key;
+            document.getElementById('apiKeyModal').classList.remove('hidden');
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apiKeyModal').classList.add('hidden');
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem(API_KEY_STORAGE, key);
+                showToast('API Key 儲存成功！已啟用 LLM 深度智慧 Agent');
+            } else {
+                localStorage.removeItem(API_KEY_STORAGE);
+                showToast('已清除 Key，恢復離線診斷模式');
+            }
+            updateApiKeyUI();
+            closeApiKeyModal();
+        }
+
+        function removeApiKey() {
+            localStorage.removeItem(API_KEY_STORAGE);
+            document.getElementById('apiKeyInput').value = '';
+            updateApiKeyUI();
+            closeApiKeyModal();
+            showToast('已清除 Key');
+        }
+
+        function updateApiKeyUI() {
+            const key = localStorage.getItem(API_KEY_STORAGE);
+            const btnText = document.getElementById('apiKeyBtnText');
+            const badge = document.getElementById('agentModeBadge');
+
+            if (key) {
+                btnText.innerText = 'API Key (已儲存)';
+                badge.innerText = 'Gemini LLM 智慧分析模式';
+                badge.className = 'bg-purple-500/20 text-purple-300 border border-purple-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold';
+            } else {
+                btnText.innerText = '設定 API Key';
+                badge.innerText = '離線規則引擎模式';
+                badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs px-2.5 py-0.5 rounded-full font-semibold';
+            }
+        }
+
+        function closeAiModal() {
+            document.getElementById('aiModal').classList.add('hidden');
+        }
+
+        // 執行 AI 賽事診斷入口
+        async function runAiAnalysis() {
+            document.getElementById('aiModal').classList.remove('hidden');
+            document.getElementById('aiLoading').classList.remove('hidden');
+            document.getElementById('aiReportContainer').classList.add('hidden');
+
+            const apiKey = localStorage.getItem(API_KEY_STORAGE);
+
+            if (!apiKey) {
+                // 模式 A: 離線規則診斷引擎
+                document.getElementById('aiModalSubtitle').innerText = '純離線系統規則引擎自動診斷中...';
+                setTimeout(() => {
+                    generateRuleBasedReport();
+                }, 600);
+            } else {
+                // 模式 B: Gemini LLM Agent 智慧診斷
+                document.getElementById('aiModalSubtitle').innerText = 'Gemini LLM 正在分析各輪數據與雪球效應...';
+                await generateGeminiLlmReport(apiKey);
+            }
+        }
+
+        // 離線規則引擎診斷計算
+        function generateRuleBasedReport() {
+            const rounds = currentData.roundsData;
+            let totalPairingDelay = 0;
+            let totalStartDelay = 0;
+            let totalInRoundOvertime = 0;
+            let lowEfficiencyRounds = [];
+            let totalFilledRounds = 0;
+
+            rounds.forEach(r => {
+                const pAnn = parseToMinutes(r.p_announce);
+                const aAnn = parseToMinutes(r.a_announce);
+                const pStart = parseToMinutes(r.p_start);
+                const aStart = parseToMinutes(r.a_start);
+                const gOver = parseToMinutes(r.game_over);
+                const aClear = parseToMinutes(r.all_clear);
+                const pEnd = parseToMinutes(r.p_round_end);
+
+                let issues = [];
+
+                if (pAnn !== null && aAnn !== null) {
+                    const diff = aAnn - pAnn;
+                    if (diff > 0) totalPairingDelay += diff;
+                    if (diff >= 5) issues.push(`配對公布延遲 ${diff} 分鐘`);
+                }
+
+                if (pStart !== null && aStart !== null) {
+                    const diff = aStart - pStart;
+                    if (diff > 0) totalStartDelay += diff;
+                    if (diff >= 5) issues.push(`開賽延誤 ${diff} 分鐘`);
+                }
+
+                if (gOver !== null && aClear !== null) {
+                    const diff = aClear - gOver;
+                    if (diff > 0) totalInRoundOvertime += diff;
+                    if (diff >= 10) issues.push(`死鬥/死局清理拖延 ${diff} 分鐘`);
+                }
+
+                if (pEnd !== null && aClear !== null) {
+                    const diff = pEnd - aClear;
+                    if (diff < 0) issues.push(`拖桌擠壓時間 ${Math.abs(diff)} 分鐘`);
+                }
+
+                if (pAnn !== null || aAnn !== null || pStart !== null) {
+                    totalFilledRounds++;
+                }
+
+                if (issues.length > 0) {
+                    lowEfficiencyRounds.push({ roundNum: r.roundNum, issues });
+                }
+            });
+
+            // 計算健康度評分 (0 ~ 100)
+            let healthScore = 100 - (totalPairingDelay * 2) - (totalStartDelay * 2.5) - (totalInRoundOvertime * 1.5) - (lowEfficiencyRounds.length * 8);
+            if (healthScore < 0) healthScore = 0;
+
+            // 渲染 Header 數據
+            const headerHtml = `
+                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-bold text-indigo-700 uppercase">賽事運作健康度分數</span>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span class="text-3xl font-black ${healthScore >= 80 ? 'text-emerald-600' : healthScore >= 60 ? 'text-amber-600' : 'text-rose-600'}">${Math.round(healthScore)}</span>
+                        <span class="text-xs text-slate-400 font-bold">/ 100</span>
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-bold text-amber-700 uppercase">發現低效瓶頸輪次</span>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span class="text-3xl font-black text-amber-800">${lowEfficiencyRounds.length}</span>
+                        <span class="text-xs text-slate-500">個輪次 (總共 R${rounds.length})</span>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-100 p-4 rounded-2xl flex flex-col justify-between">
+                    <span class="text-xs font-bold text-purple-700 uppercase">累計延誤耗時</span>
+                    <div class="flex items-baseline gap-1 mt-1">
+                        <span class="text-3xl font-black text-purple-800">${totalPairingDelay + totalStartDelay + totalInRoundOvertime}</span>
+                        <span class="text-xs text-slate-500">總延遲分鐘</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('aiSummaryHeader').innerHTML = headerHtml;
+
+            // 生成報告 HTML
+            let reportHtml = `<h3><i class="fa-solid fa-list-check text-indigo-600"></i> 離線規則診斷報告明細</h3>`;
+
+            if (totalFilledRounds === 0) {
+                reportHtml += `<p class="text-slate-500">尚無完整的輪次時間紀錄。請先在表格中填入預計與實際時間，AI Agent 將會為您解析低效瓶頸！</p>`;
+            } else if (lowEfficiencyRounds.length === 0) {
+                reportHtml += `<p class="text-emerald-700 font-bold">🎉 太棒了！目前所有已填寫輪次運作極為流暢，配對與開賽皆在標準掌控時間內。</p>`;
+            } else {
+                reportHtml += `<p class="text-slate-700">經過離線規則引擎掃描，以下輪次表現出效率低下的跡象：</p><ul>`;
+                lowEfficiencyRounds.forEach(item => {
+                    reportHtml += `<li><strong>R${item.roundNum} 輪次：</strong> ${item.issues.join('、 ')}</li>`;
+                });
+                reportHtml += `</ul>`;
+
+                reportHtml += `<h3><i class="fa-solid fa-lightbulb text-amber-500"></i> 現場改善實務建議</h3><ul>`;
+                if (totalPairingDelay > 0) {
+                    reportHtml += `<li><strong>配對發布卡關：</strong>建議下一輪提前 3 分鐘核對成績卡，或採用數位螢幕/線上 QR Code 輔助公布。</li>`;
+                }
+                if (totalInRoundOvertime > 0) {
+                    reportHtml += `<li><strong>死鬥/死局耗時過長：</strong>比賽時間到的前 5 分鐘安排裁判巡場，提示選手加快動態，時間到立即進行回合倒數檢核。</li>`;
+                }
+                if (totalStartDelay > 0) {
+                    reportHtml += `<li><strong>選手就座遲緩：</strong>播放語音廣播提醒選手就座，並在桌次廣播無人就座後 3 分鐘進行判罰處置。</li>`;
+                }
+                reportHtml += `</ul>`;
+            }
+
+            document.getElementById('aiReportText').innerHTML = reportHtml;
+            document.getElementById('aiChatSection').classList.add('hidden');
+
+            lastAiReportText = reportHtml.replace(/<[^>]*>/g, '');
+
+            document.getElementById('aiLoading').classList.add('hidden');
+            document.getElementById('aiReportContainer').classList.remove('hidden');
+        }
+
+        // Gemini LLM Agent API 呼叫
+        async function generateGeminiLlmReport(apiKey) {
+            const systemPrompt = `你是一位世界級的寶可夢/卡牌賽事總裁判兼營運時間檢核專家。
+你將收到一筆賽事的完整時間紀錄 JSON 數據。
+請針對這筆賽事進行多維度深度效率診斷報告，格式採用清晰的 HTML/Markdown 風格，包含：
+1. 【總體運作效率評估】：給予 0~100 的健康度評分與簡短總結。
+2. 【低效輪次精準定位與成因歸因】：點名特定輪次（如 R1, R3...），分析是配對公布卡關、開賽就座緩慢，還是輪內死鬥拖桌過長。
+3. 【跨輪次延誤連鎖效應（雪球效應）】：分析上一輪的結束遲延如何擠壓到下一輪的預計開賽。
+4. 【現場裁決與工作人員人力調配實務建議】：給予現場裁判與賽務組極具可行性的操作建議。`;
+
+            const prompt = `賽事設定：${JSON.stringify(currentData.config)}
+輪次時間資料：
+${JSON.stringify(currentData.roundsData)}
+
+請為這場賽事生成時間效率分析診斷報告。`;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                const result = await response.json();
+                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!text) {
+                    throw new Error('API 無法取得回應或金鑰失效');
+                }
+
+                // 簡單將 Markdown 的 ** 轉為 bold, # 轉為標題
+                let formattedText = text
+                    .replace(/### (.*)/g, '<h3 class="text-lg font-bold text-slate-800 mt-4 mb-2">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
+                    .replace(/\n\n/g, '</p><p class="mt-2">')
+                    .replace(/\* (.*)/g, '<li class="ml-4 list-disc">$1</li>');
+
+                document.getElementById('aiSummaryHeader').innerHTML = `
+                    <div class="col-span-full bg-gradient-to-r from-purple-900 to-indigo-900 text-white p-4.5 rounded-2xl flex items-center justify-between shadow-md">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-sparkles text-amber-400 text-2xl"></i>
+                            <div>
+                                <h4 class="font-extrabold text-base">Gemini 3 Flash 智慧分析已生成</h4>
+                                <p class="text-xs text-purple-200">依據現有輪次時間進行多維度歸因與連鎖效應分析</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('aiReportText').innerHTML = `<div class="space-y-3">${formattedText}</div>`;
+                document.getElementById('aiChatSection').classList.remove('hidden');
+
+                lastAiReportText = text;
+
+            } catch (err) {
+                console.error(err);
+                showToast('Gemini API 調用失敗，已切換至離線診斷', 'error');
+                generateRuleBasedReport();
+                return;
+            }
+
+            document.getElementById('aiLoading').classList.add('hidden');
+            document.getElementById('aiReportContainer').classList.remove('hidden');
+        }
+
+        // 與 Gemini 進行追加問題對話
+        async function sendUserQuery() {
+            const input = document.getElementById('userQueryInput');
+            const query = input.value.trim();
+            const apiKey = localStorage.getItem(API_KEY_STORAGE);
+
+            if (!query || !apiKey) return;
+
+            const chatHistory = document.getElementById('chatHistory');
+            chatHistory.innerHTML += `<div class="text-right font-bold text-indigo-700">問：${query}</div>`;
+            input.value = '';
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const prompt = `對話歷史情境：賽事時間數據為 ${JSON.stringify(currentData.roundsData)}。先前分析：${lastAiReportText}。
+使用者追加問題：${query}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const result = await response.json();
+                const reply = result?.candidates?.[0]?.content?.parts?.[0]?.text || '無回應';
+
+                chatHistory.innerHTML += `<div class="bg-white p-2.5 rounded-xl border border-slate-200 text-slate-800 mt-1"><strong>Gemini AI：</strong>${reply}</div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            } catch (e) {
+                chatHistory.innerHTML += `<div class="text-rose-600">發送失敗：${e.message}</div>`;
+            }
+        }
+
+        // 匯出 AI 報告文字檔
+        function exportAiReport() {
+            if (!lastAiReportText) return;
+            const conf = currentData.config;
+            const content = `【賽事時間效率 AI 診斷報告】\n賽事：${conf.region} (${conf.category})\n日期：${conf.date}\n\n${lastAiReportText}`;
+            
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `AI診斷報告_${conf.region}_${conf.date}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('已成功下載 AI 診斷報告！');
         }
 
         // 匯出 JSON
@@ -770,7 +1214,7 @@
             showToast('已匯出 Excel/CSV 報表');
         }
 
-        // 提示訊息 Toast 顯示機制
+        // Toast 提示訊息
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
