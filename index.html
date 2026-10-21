@@ -1,3 +1,10 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>賽事輪次時間紀錄與效率檢核工具</title>
+    
 <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -328,9 +335,6 @@
 
 </main>
 
-<!-- 動態建立並觸發的隱藏檔案上傳 input -->
-<input type="file" id="dynamicImportFileInput" accept=".json" class="hidden" onchange="handleImportFile(event)">
-
 <!-- 訊息提示 Toast -->
 <div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md bg-slate-900 text-white text-xs md:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2 justify-center sm:justify-start">
     <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base md:text-lg"></i>
@@ -411,9 +415,19 @@
         }
     }
 
-    // ---------- 匯入 JSON 檔案功能 ----------
+    // ---------- 匯入 JSON 檔案功能（動態生成，不佔用畫面空間） ----------
     function triggerImportJson() {
-        document.getElementById('dynamicImportFileInput').click();
+        let existingInput = document.getElementById('dynamicImportFileInput');
+        if (!existingInput) {
+            existingInput = document.createElement('input');
+            existingInput.type = 'file';
+            existingInput.id = 'dynamicImportFileInput';
+            existingInput.accept = '.json';
+            existingInput.style.display = 'none';
+            existingInput.onchange = handleImportFile;
+            document.body.appendChild(existingInput);
+        }
+        existingInput.click();
     }
 
     function handleImportFile(event) {
