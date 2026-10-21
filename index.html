@@ -219,24 +219,12 @@
                         </h2>
                     </div>
 
-                    <!-- 📱 手機端採 2 欄按鈕網格流線型呈現 -->
+                    <!-- 📱 手機端採 2 欄按鈕網格流線型呈現 (已完全移除最上排分區清除下拉選單) -->
                     <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto" data-html2canvas-ignore="true">
                         <button onclick="switchToStep1()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-300">
                             <i class="fa-solid fa-arrow-left"></i> 返回設定
                         </button>
                         
-                        <!-- 🧹 分區清除選擇按鈕 -->
-                        <div class="relative">
-                            <select onchange="handleClearSection(this)" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-2.5 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors cursor-pointer appearance-none pr-6 shadow-sm">
-                                <option value="" disabled selected>🧹 清除項目...</option>
-                                <option value="announce">僅配對區</option>
-                                <option value="start">僅開賽區</option>
-                                <option value="end">僅比賽結束區</option>
-                                <option value="all">清空全部數據</option>
-                            </select>
-                            <i class="fa-solid fa-chevron-down absolute right-2 top-3 text-[10px] text-rose-500 pointer-events-none"></i>
-                        </div>
-
                         <!-- 📷 匯出 PNG 圖片按鈕 -->
                         <button onclick="exportImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-camera"></i> 匯出圖片
@@ -409,14 +397,7 @@
             });
         }
 
-        // ---------- 🧹 下拉選單處理分區清除 ----------
-        function handleClearSection(selectEl) {
-            const type = selectEl.value;
-            if (!type) return;
-            clearSectionData(type);
-            selectEl.selectedIndex = 0;
-        }
-
+        // ---------- 🧹 各區標頭按鈕專用：分區清除數據 ----------
         function clearSectionData(type) {
             if (!currentData.roundsData || currentData.roundsData.length === 0) return;
 
@@ -424,19 +405,18 @@
             if (type === 'announce') labelName = '「配對公布區」';
             else if (type === 'start') labelName = '「開賽時程區」';
             else if (type === 'end') labelName = '「比賽與結束區」';
-            else if (type === 'all') labelName = '「全部時間」';
 
             if (confirm(`確定要清除所有輪次的 ${labelName} 資料嗎？`)) {
                 currentData.roundsData.forEach(row => {
-                    if (type === 'announce' || type === 'all') {
+                    if (type === 'announce') {
                         row.p_announce = '';
                         row.a_announce = '';
                     }
-                    if (type === 'start' || type === 'all') {
+                    if (type === 'start') {
                         row.p_start = '';
                         row.a_start = '';
                     }
-                    if (type === 'end' || type === 'all') {
+                    if (type === 'end') {
                         row.all_clear = '';
                         row.p_round_end = '';
                     }
