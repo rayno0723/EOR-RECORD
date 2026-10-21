@@ -43,17 +43,28 @@
             left: 0;
             z-index: 20;
         }
-        /* 自訂美化橫向捲軸 */
+        
+        /* 💡 針對 iPad 觸控優化：加大滾動條並確保雙向滑動順暢 */
         .custom-scrollbar::-webkit-scrollbar {
-            height: 8px;
+            height: 14px;
+            width: 14px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
+            background: #e2e8f0;
+            border-radius: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
+            background: #94a3b8;
+            border-radius: 8px;
+            border: 3px solid #e2e8f0;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* 💡 讓輸入框穿透觸控事件，手指在輸入框上也能直接滑動頁面 */
+        .input-touch-pass {
+            touch-action: pan-x pan-y;
         }
         
         /* 隱藏預設的 input number 上下箭頭，保持純數字輸入體驗 */
@@ -115,7 +126,7 @@
                 </div>
 
                 <form id="configForm" onsubmit="event.preventDefault(); startTournament();" class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1.5">1. 賽事日期</label>
                             <input type="date" id="inputDate" required
@@ -123,8 +134,8 @@
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-slate-700 mb-1.5">2. 地區 / 場館</label>
-                            <input type="text" id="inputRegion" placeholder="例如：台北圓山 / 台南" required
-                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <input type="text" id="inputRegion" placeholder="例：台北圓山" maxlength="10" required
+                                class="w-full md:w-56 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         </div>
                     </div>
 
@@ -216,9 +227,9 @@
                 </div>
             </div>
 
-            <!-- 時間表主要表格 -->
+            <!-- 時間表主要表格（移除內部 max-height 限制與獨立捲動，讓整個外層與網頁能隨手滑動） -->
             <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto max-h-[calc(100vh-220px)] custom-scrollbar touch-pan-x">
+                <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
                     <table class="w-full text-sm md:text-base text-left border-collapse min-w-[1280px]">
                         <thead class="text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
                             <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
@@ -409,7 +420,7 @@
             return null;
         }
 
-        // ---------- 雙模態輸入框 (Datalist + inputmode=numeric) ----------
+        // ---------- 雙模態輸入框 (Datalist + inputmode=numeric + iPad 手勢觸控相容) ----------
         function buildTimeInputHTML(roundIndex, fieldName, value) {
             let [h, m] = value ? value.split(':') : ['', ''];
             
@@ -417,11 +428,11 @@
                 <div class="flex items-center justify-center gap-1.5">
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-hours" maxlength="2" placeholder="時" value="${h}"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'h')"
-                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal">
+                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
                     <span class="text-slate-400 font-bold text-base md:text-lg">:</span>
                     <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-mins" maxlength="2" placeholder="分" value="${m}"
                            onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'm')"
-                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal">
+                           class="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-center text-sm md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
                 </div>
             `;
         }
