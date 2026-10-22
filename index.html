@@ -510,7 +510,13 @@
                         tbl.style.minWidth = '1360px';
                     });
 
-                    // 🛠️ 終極解決方案：捨棄 input，在截圖瞬間直接用乾淨的純文字表格呈現（Excel 樣式乾淨排版）
+                    // 🛠️ 終極解決方案：將所有表格儲存格（包括時間輸入、時間差標籤、桌次時間）統一改為絕對垂直置中、字體放大至 15px、去除多餘浮動框線，確保截圖 100% 絕不跑版！
+                    const clonedCells = clonedDoc.querySelectorAll('td');
+                    clonedCells.forEach(td => {
+                        td.style.padding = '8px 4px';
+                        td.style.verticalAlign = 'middle';
+                    });
+
                     const timeContainers = clonedDoc.querySelectorAll('td > div.flex');
                     timeContainers.forEach(container => {
                         const inputs = container.querySelectorAll('input');
@@ -521,14 +527,17 @@
                             
                             const textSpan = clonedDoc.createElement('span');
                             textSpan.style.cssText = `
-                                display: inline-block !important;
-                                font-size: 14px !important;
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                font-size: 17px !important;
                                 font-weight: bold !important;
                                 font-family: 'Courier New', Courier, monospace !important;
                                 color: ${hasValue ? '#0f172a' : '#94a3b8'} !important;
-                                text-align: center !important;
                                 width: 100% !important;
-                                line-height: 28px !important;
+                                height: 100% !important;
+                                min-height: 36px !important;
+                                box-sizing: border-box !important;
                             `;
                             textSpan.textContent = hasValue ? `${h || '00'}:${m || '00'}` : '--:--';
                             
@@ -536,6 +545,24 @@
                                 container.parentNode.replaceChild(textSpan, container);
                             }
                         }
+                    });
+
+                    // 徹底清除時間差與桌次時間的背景框與邊框，字體放大至 17px 方便閱讀，純文字置中對齊
+                    const allBadges = clonedDoc.querySelectorAll('td span.inline-block, td span.font-mono');
+                    allBadges.forEach(badge => {
+                        badge.style.display = 'flex';
+                        badge.style.alignItems = 'center';
+                        badge.style.justifyContent = 'center';
+                        badge.style.fontSize = '17px';
+                        badge.style.fontWeight = 'bold';
+                        badge.style.background = 'transparent';
+                        badge.style.backgroundColor = 'transparent';
+                        badge.style.border = 'none';
+                        badge.style.boxShadow = 'none';
+                        badge.style.padding = '0';
+                        badge.style.width = '100%';
+                        badge.style.height = '100%';
+                        badge.style.minHeight = '36px';
                     });
 
                     // 💡 採取您的極佳建議：既然背景框框容易位移，直接在截圖時將上方資訊轉為乾淨俐落的「純文字標籤」，無任何位移風險！
@@ -554,20 +581,18 @@
                             padding: 16px 20px !important;
                             border-bottom: 2px solid #e2e8f0 !important;
                             font-family: 'Helvetica', 'Arial', sans-serif !important;
-                            display: flex !important;
-                            justify-content: space-between !important;
-                            align-items: center !important;
+                            display: block !important;
                             width: 100% !important;
                             box-sizing: border-box !important;
                         `;
 
                         cleanHeader.innerHTML = `
                             <div style="width: 100%;">
-                                <div style="font-size: 15px; font-weight: bold; color: #475569; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
-                                    <span>📌 賽事資訊：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${typeText}</span></span>
-                                    <span>📅 日期：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${dateText}</span></span>
-                                    <span>組別：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${catText}</span></span>
-                                    <span>地區：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${regionText}</span></span>
+                                <div style="font-size: 15px; font-weight: bold; color: #475569; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
+                                    <span>📌 賽事資訊：<span style="color: #1e293b; font-weight: bold;">${typeText}</span></span>
+                                    <span>📅 日期：<span style="color: #1e293b; font-weight: bold;">${dateText}</span></span>
+                                    <span>組別：<span style="color: #1e293b; font-weight: bold;">${catText}</span></span>
+                                    <span>地區：<span style="color: #1e293b; font-weight: bold;">${regionText}</span></span>
                                 </div>
                                 <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px;">
                                     賽事時間效率明細表 <span style="font-size: 14px; font-weight: normal; color: #64748b;">(共 ${roundsText} 輪)</span>
