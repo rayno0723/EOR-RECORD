@@ -383,6 +383,7 @@
             document.getElementById('inputDate').value = currentData.config.date;
             initDatalists();
             renderHistoryList();
+            toggleGameType();
         };
 
         // UI Toggle for Tournament Type
@@ -396,9 +397,12 @@
             if (cat === 'pokemon') {
                 inputPoke.classList.remove('hidden');
                 inputOther.classList.add('hidden');
+                inputOther.required = false;
             } else {
                 inputPoke.classList.add('hidden');
                 inputOther.classList.remove('hidden');
+                inputOther.required = true;
+                inputOther.focus();
             }
         }
 
@@ -757,9 +761,17 @@
 
             const gameCatEl = document.querySelector('input[name="gameCategory"]:checked');
             const gameCategory = gameCatEl ? gameCatEl.value : 'pokemon';
-            const type = gameCategory === 'pokemon' ? 
-                         document.getElementById('inputTypePoke').value : 
-                         document.getElementById('inputTypeOther').value.trim();
+            let type = '';
+
+            if (gameCategory === 'pokemon') {
+                type = document.getElementById('inputTypePoke').value;
+            } else {
+                type = document.getElementById('inputTypeOther').value.trim();
+                if (!type) {
+                    showToast('請輸入賽事名稱！', 'error');
+                    return;
+                }
+            }
 
             if (!region) {
                 showToast('請輸入賽事地區！', 'error');
