@@ -466,30 +466,49 @@
             const captureTarget = document.getElementById('captureArea');
             showToast('正在生成完整賽事報表圖片...', 'info');
 
-            // 💡 解決只截取可視範圍：動態強制抓取完整內容的高度與寬度
+            // 💡 徹底解決只截取可視範圍：取得完整內容的實際 scrollHeight 與 scrollWidth
+            const fullWidth = Math.max(captureTarget.scrollWidth, 1400);
+            const fullHeight = captureTarget.scrollHeight;
+
             const originalWidth = captureTarget.style.width;
             const originalHeight = captureTarget.style.height;
             const originalOverflow = captureTarget.style.overflow;
 
-            // 展開所有捲動軸與寬度以涵蓋完整表格
-            captureTarget.style.width = '1400px';
+            captureTarget.style.width = fullWidth + 'px';
+            captureTarget.style.height = fullHeight + 'px';
             captureTarget.style.overflow = 'visible';
 
             html2canvas(captureTarget, {
                 scale: 2,
                 useCORS: true,
                 backgroundColor: '#f1f5f9',
-                width: 1400,
-                windowWidth: 1400,
+                width: fullWidth,
+                height: fullHeight,
+                windowWidth: fullWidth,
+                windowHeight: fullHeight,
                 scrollY: 0,
                 scrollX: 0,
                 onclone: (clonedDoc) => {
                     const clonedTarget = clonedDoc.getElementById('captureArea');
                     if (clonedTarget) {
-                        clonedTarget.style.width = '1400px';
+                        clonedTarget.style.width = fullWidth + 'px';
                         clonedTarget.style.height = 'auto';
                         clonedTarget.style.overflow = 'visible';
                     }
+
+                    // 💡 關鍵修正：將所有帶有 overflow-x-auto 或捲動限制的內部容器在截圖時全部展開，確保左右兩側所有欄位完整顯示不被切斷
+                    const scrollContainers = clonedDoc.querySelectorAll('.overflow-x-auto, .custom-scrollbar');
+                    scrollContainers.forEach(sc => {
+                        sc.style.overflow = 'visible';
+                        sc.style.width = '100%';
+                        sc.style.maxWidth = 'none';
+                    });
+
+                    const tables = clonedDoc.querySelectorAll('table');
+                    tables.forEach(tbl => {
+                        tbl.style.width = '100%';
+                        tbl.style.minWidth = '1360px';
+                    });
 
                     // 🛠️ 終極解決方案：捨棄 input，在截圖瞬間直接用乾淨的純文字表格呈現（Excel 樣式乾淨排版）
                     const timeContainers = clonedDoc.querySelectorAll('td > div.flex');
@@ -519,46 +538,46 @@
                         }
                     });
 
-                    // 🛠️ 徹底修復右上/左上賽事資訊與徽章的文字偏移與包覆問題
-                    const headerInfoBox = clonedDoc.querySelector('#captureArea .bg-white.rounded-2xl.shadow-md');
-                    if (headerInfoBox) {
-                        headerInfoBox.style.width = '100% !important';
-                        headerInfoBox.style.boxSizing = 'border-box !important';
-                    }
+                    // 💡 採取您的極佳建議：既然背景框框容易位移，直接在截圖時將上方資訊轉為乾淨俐落的「純文字標籤」，無任何位移風險！
+                    const topInfoContainer = clonedDoc.querySelector('#captureArea .bg-white.rounded-2xl.shadow-md');
+                    if (topInfoContainer) {
+                        const typeText = clonedDoc.getElementById('badgeType') ? clonedDoc.getElementById('badgeType').innerText : '';
+                        const catText = clonedDoc.getElementById('badgeCategory') ? clonedDoc.getElementById('badgeCategory').innerText : '';
+                        const regionText = clonedDoc.getElementById('displayRegion') ? clonedDoc.getElementById('displayRegion').innerText : '';
+                        const dateText = clonedDoc.getElementById('displayDate') ? clonedDoc.getElementById('displayDate').innerText : '';
+                        const roundsText = clonedDoc.getElementById('displayRounds') ? clonedDoc.getElementById('displayRounds').innerText : '';
 
-                    const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
-                    badges.forEach(b => {
-                        // 移除所有會造成 flex 排版與 padding 跑版的 class
-                        b.className = 'text-xs font-bold text-slate-800';
-                        b.style.cssText = `
-                            display: inline-block !important;
-                            position: relative !important;
-                            top: 0 !important;
-                            left: 0 !important;
-                            margin: 2px 4px !important;
-                            padding: 4px 12px !important;
-                            line-height: 20px !important;
-                            height: auto !important;
-                            text-align: center !important;
-                            vertical-align: middle !important;
-                            background-color: #f8fafc !important;
-                            border: 1px solid #cbd5e1 !important;
-                            border-radius: 9999px !important;
+                        // 建立一個絕對平整、無位移風險的純文字資訊橫幅
+                        const cleanHeader = clonedDoc.createElement('div');
+                        cleanHeader.style.cssText = `
+                            background-color: #ffffff !important;
+                            padding: 16px 20px !important;
+                            border-bottom: 2px solid #e2e8f0 !important;
                             font-family: 'Helvetica', 'Arial', sans-serif !important;
+                            display: flex !important;
+                            justify-content: space-between !important;
+                            align-items: center !important;
+                            width: 100% !important;
                             box-sizing: border-box !important;
                         `;
-                    });
 
-                    // 特別針對第一個球種徽章背景色保留
-                    const badgeType = clonedDoc.getElementById('badgeType');
-                    if (badgeType) {
-                        const originalBg = document.getElementById('badgeType').className;
-                        if (originalBg.includes('bg-blue-600')) badgeType.style.backgroundColor = '#2563eb';
-                        else if (originalBg.includes('bg-amber-500')) badgeType.style.backgroundColor = '#f59e0b';
-                        else if (originalBg.includes('bg-rose-600')) badgeType.style.backgroundColor = '#e11d48';
-                        else if (originalBg.includes('bg-purple-600')) badgeType.style.backgroundColor = '#9333ea';
-                        else badgeType.style.backgroundColor = '#0f172a';
-                        badgeType.style.color = '#ffffff';
+                        cleanHeader.innerHTML = `
+                            <div>
+                                <div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 4px;">
+                                    📌 賽事分類：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${typeText}</span> 
+                                    組別：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${catText}</span>
+                                    地區：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${regionText}</span>
+                                </div>
+                                <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px;">
+                                    賽事時間效率明細表 <span style="font-size: 14px; font-weight: normal; color: #64748b;">(共 ${roundsText} 輪)</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right; font-size: 13px; font-weight: bold; color: #64748b;">
+                                📅 日期：${dateText}
+                            </div>
+                        `;
+
+                        topInfoContainer.parentNode.replaceChild(cleanHeader, topInfoContainer);
                     }
                 }
             }).then(canvas => {
