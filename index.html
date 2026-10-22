@@ -232,13 +232,13 @@
                 <div class="bg-white rounded-2xl shadow-md p-3.5 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
                     <div class="space-y-1 w-full lg:w-auto">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span id="badgeType" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-slate-700 leading-none h-6">--</span>
-                            <span id="badgeCategory" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 leading-none h-6">--</span>
-                            <span id="badgeRegion" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 gap-1 leading-none h-6">
-                                <i class="fa-solid fa-location-dot mt-px"></i> <span id="displayRegion" class="leading-none mt-px">--</span>
+                            <span id="badgeType" class="inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeCategory" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
+                            <span id="badgeRegion" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                <i class="fa-solid fa-location-dot align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayRegion" class="align-middle">--</span>
                             </span>
-                            <span id="badgeDate" class="text-xs text-slate-500 inline-flex items-center justify-center gap-1 ml-0.5 leading-none h-6">
-                                <i class="fa-regular fa-calendar mt-px"></i> <span id="displayDate" class="leading-none mt-px">--</span>
+                            <span id="badgeDate" class="inline-block align-middle text-center h-6 leading-[24px] text-xs text-slate-500 ml-1">
+                                <i class="fa-regular fa-calendar align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayDate" class="align-middle">--</span>
                             </span>
                         </div>
                         <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
@@ -480,27 +480,28 @@
                         const val = input.value;
                         const textContent = val ? val : '';
 
-                        // 建立一個取代 input 的 div (不要用 span，div 支援度更好)
+                        // 建立一個取代 input 的 div
                         const wrapper = clonedDoc.createElement('div');
-                        wrapper.className = input.className; // 繼承原本的 Tailwind class
+                        wrapper.className = input.className;
                         
                         // 移除所有可能干擾的 padding 和 margin，並強制重寫 display
-                        wrapper.style.cssText += `
-                            display: flex !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            line-height: 1 !important;
-                            box-sizing: border-box !important;
-                        `;
-                        
                         // 讀取原 input 尺寸並套用
                         const rect = input.getBoundingClientRect();
                         const h = rect.height > 0 ? rect.height : 28;
                         const w = rect.width > 0 ? rect.width : 40;
-                        wrapper.style.height = `${h}px`;
-                        wrapper.style.width = `${w}px`;
+                        
+                        // 🛠️ 拋棄 Flex，改用與徽章相同的 inline-block + line-height 絕對數學置中策略
+                        wrapper.style.cssText += `
+                            display: inline-block !important;
+                            text-align: center !important;
+                            vertical-align: top !important; /* 確保與外部對齊 */
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            height: ${h}px !important;
+                            width: ${w}px !important;
+                            line-height: ${h}px !important; /* 行高等於高度，達成絕對單行垂直置中 */
+                            box-sizing: border-box !important;
+                        `;
                         
                         // 設定文字
                         wrapper.textContent = textContent;
@@ -518,21 +519,9 @@
                             input.parentNode.replaceChild(wrapper, input);
                         }
                     });
-
-                    // 上方的徽章(球種、組別、地區) 也套用 Flex 絕對置中，避免 Safari 跑版
-                    const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
-                    badges.forEach(b => {
-                        b.style.cssText += `
-                            display: flex !important;
-                            align-items: center !important;
-                            justify-content: center !important;
-                            padding-top: 0 !important;
-                            padding-bottom: 0 !important;
-                            line-height: 1 !important;
-                        `;
-                        const h = b.getBoundingClientRect().height || 24;
-                        b.style.height = `${h}px`;
-                    });
+                    
+                    // ⚠️ 注意：上方徽章(球種、組別) 已在 HTML 端改用 inline-block 與 fixed line-height 置中，
+                    // 這裡不再使用 JS 強制覆寫 Flex，以免造成截圖時文字往上飄移。
                 }
             }).then(canvas => {
                 const fileName = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
@@ -973,7 +962,7 @@
             document.getElementById('thDurationDisplay').innerText = `(+${conf.roundDuration || 25}分)`;
 
             const badgeType = document.getElementById('badgeType');
-            badgeType.className = 'inline-flex items-center justify-center leading-none h-6 px-2.5 py-0.5 rounded-full text-xs font-bold text-white ';
+            badgeType.className = 'inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white ';
             switch (conf.type) {
                 case '超級球': badgeType.classList.add('bg-blue-600'); break;
                 case '高級球': badgeType.classList.add('bg-amber-500'); break;
