@@ -76,17 +76,11 @@
             -moz-appearance: textfield;
         }
 
-        /* 🛠️ 修正 html2canvas 匯出時 input 內文字與 placeholder 向上跑偏問題 */
+        /* 🛠️ 修正輸入框隱藏權重與基線對齊 */
         input {
-            line-height: normal !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            vertical-align: middle !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
+            line-height: normal;
         }
-        input.hidden, .hidden {
+        input.hidden, select.hidden, .hidden {
             display: none !important;
         }
 
@@ -367,6 +361,37 @@
 
     </main>
 
+    
+    <!-- 📷 圖片匯出預覽與儲存彈窗 (iPad / iOS / Android 全平台相容) -->
+    <div id="imageModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-base md:text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-image text-indigo-400"></i> 賽事報表圖片已生成
+                </h3>
+                <button onclick="closeImageModal()" class="text-slate-400 hover:text-white text-xl px-2 py-1 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-3.5 bg-amber-50 border-b border-amber-200 text-xs md:text-sm text-amber-900 flex items-center gap-2.5 shrink-0">
+                <i class="fa-solid fa-mobile-screen-button text-amber-600 text-base shrink-0"></i>
+                <span><b>iPad / iOS / Android 手機用戶：</b>請<b>長按下方圖片</b>，點選<b>「加入照片」</b>或<b>「儲存圖片」</b>即可存入相簿！</span>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow flex justify-center items-center bg-slate-100">
+                <img id="previewImg" src="" alt="賽事報表預覽" class="max-w-full h-auto rounded-xl shadow-md border border-slate-300">
+            </div>
+            <div class="p-3 md:p-4 bg-white border-t border-slate-200 flex flex-wrap justify-end gap-2.5 shrink-0">
+                <button onclick="closeImageModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                    關閉窗口
+                </button>
+                <a id="downloadImgBtn" href="" download="" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-download"></i> 直接下載檔案
+                </a>
+            </div>
+        </div>
+    </div>
+
+
     <!-- 訊息提示 Toast -->
     <div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md bg-slate-900 text-white text-xs md:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2 justify-center sm:justify-start">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base md:text-lg"></i>
@@ -445,17 +470,82 @@
                 scale: 2,
                 useCORS: true,
                 backgroundColor: '#f1f5f9',
-                windowWidth: 1400
+                windowWidth: 1400,
+                onclone: (clonedDoc) => {
+                    // 🛠️ 專為 html2canvas 截圖優化：將輸入框轉為 div 避免文字/Placeholder 向上偏移
+                    const inputs = clonedDoc.querySelectorAll('#scheduleTbody input');
+                    inputs.forEach(input => {
+                        if (input.classList.contains('hidden') || input.style.display === 'none') return;
+
+                        const val = input.value;
+                        const placeholder = input.placeholder || '';
+                        const textContent = val ? val : placeholder;
+
+                        const div = clonedDoc.createElement('div');
+                        div.className = input.className;
+                        div.textContent = textContent;
+
+                        // 設置置中 Flex 排版
+                        div.style.display = 'inline-flex';
+                        div.style.alignItems = 'center';
+                        div.style.justifyContent = 'center';
+                        div.style.lineHeight = '1';
+                        div.style.padding = '0';
+                        div.style.boxSizing = 'border-box';
+
+                        if (!val && placeholder) {
+                            div.style.color = '#94a3b8'; // slate-400 placeholder 灰色
+                            div.style.fontWeight = 'normal';
+                        } else {
+                            div.style.color = '#1e293b'; // slate-800 實體文字
+                            div.style.fontWeight = 'bold';
+                        }
+
+                        if (input.parentNode) {
+                            input.parentNode.replaceChild(div, input);
+                        }
+                    });
+                }
             }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                showToast('已成功匯出高畫質圖片！');
+                const fileName = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
+                const dataUrl = canvas.toDataURL('image/png');
+
+                canvas.toBlob((blob) => {
+                    const blobUrl = blob ? URL.createObjectURL(blob) : dataUrl;
+
+                    // 1. 設定彈窗預覽圖片與下載連結
+                    const previewImg = document.getElementById('previewImg');
+                    const downloadBtn = document.getElementById('downloadImgBtn');
+                    
+                    previewImg.src = dataUrl;
+                    downloadBtn.href = blobUrl;
+                    downloadBtn.download = fileName;
+
+                    // 2. 顯示圖片預覽彈窗 (相容 iPad / iOS Safari / Android)
+                    document.getElementById('imageModal').classList.remove('hidden');
+
+                    // 3. 電腦版自動觸發下載；行動裝置 (iPad/iOS/Android) 顯示提示選單
+                    const isTouchMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || 
+                                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+                    if (!isTouchMobile) {
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = fileName;
+                        link.click();
+                        showToast('已匯出高畫質圖片！');
+                    } else {
+                        showToast('圖片已生成！長按圖片即可儲存至相簿', 'success');
+                    }
+                }, 'image/png');
             }).catch(err => {
                 console.error('Canvas export error:', err);
                 showToast('圖片生成失敗，請再試一次', 'error');
             });
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
         }
 
         // ---------- 🧹 各區標頭按鈕專用：分區清除數據 ----------
@@ -589,9 +679,9 @@
                     ${showNowButton ? `
                         <button type="button" onclick="fillNowTime(${roundIndex}, '${fieldName}')" 
                                 title="填入現在時間" data-html2canvas-ignore="true"
-                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-[10px] md:text-xs px-1.5 py-1 rounded-md md:rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95">
-                            <span class="hidden md:inline">NOW</span>
-                            <span class="md:hidden"><i class="fa-solid fa-bolt text-[9px]"></i></span>
+                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-[10px] md:text-xs px-1.5 py-1 rounded-md md:rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-bolt text-amber-500 text-[10px] md:text-xs"></i>
+                            <span>NOW</span>
                         </button>
                     ` : ''}
                 </div>
