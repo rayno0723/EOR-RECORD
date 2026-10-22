@@ -464,18 +464,34 @@
         // ---------- 📷 將表格區域匯出為圖片 ----------
         function exportImage() {
             const captureTarget = document.getElementById('captureArea');
-            showToast('正在生成賽事報表圖片...', 'info');
+            showToast('正在生成完整賽事報表圖片...', 'info');
+
+            // 💡 解決只截取可視範圍：動態強制抓取完整內容的高度與寬度
+            const originalWidth = captureTarget.style.width;
+            const originalHeight = captureTarget.style.height;
+            const originalOverflow = captureTarget.style.overflow;
+
+            // 展開所有捲動軸與寬度以涵蓋完整表格
+            captureTarget.style.width = '1400px';
+            captureTarget.style.overflow = 'visible';
 
             html2canvas(captureTarget, {
                 scale: 2,
                 useCORS: true,
                 backgroundColor: '#f1f5f9',
+                width: 1400,
                 windowWidth: 1400,
+                scrollY: 0,
+                scrollX: 0,
                 onclone: (clonedDoc) => {
-                    // 🚀 終極破壞性修復：在截圖瞬間，直接把「框框」全部拔掉，改成「純文字」顯示！
-                    // 既然 html2canvas 算不準框線與文字的距離，我們就不要框線了，完全順應您的建議！
-                    
-                    // 1. 處理所有時間輸入欄位
+                    const clonedTarget = clonedDoc.getElementById('captureArea');
+                    if (clonedTarget) {
+                        clonedTarget.style.width = '1400px';
+                        clonedTarget.style.height = 'auto';
+                        clonedTarget.style.overflow = 'visible';
+                    }
+
+                    // 🛠️ 終極解決方案：捨棄 input，在截圖瞬間直接用乾淨的純文字表格呈現（Excel 樣式乾淨排版）
                     const timeContainers = clonedDoc.querySelectorAll('td > div.flex');
                     timeContainers.forEach(container => {
                         const inputs = container.querySelectorAll('input');
@@ -484,61 +500,72 @@
                             const m = inputs[1].value;
                             const hasValue = h !== '' || m !== '';
                             
-                            // 建立純文字節點取代原本複雜的輸入框
-                            const textDiv = clonedDoc.createElement('div');
-                            textDiv.style.cssText = `
-                                display: block !important;
-                                width: 100% !important;
+                            const textSpan = clonedDoc.createElement('span');
+                            textSpan.style.cssText = `
+                                display: inline-block !important;
+                                font-size: 14px !important;
+                                font-weight: bold !important;
+                                font-family: 'Courier New', Courier, monospace !important;
+                                color: ${hasValue ? '#0f172a' : '#94a3b8'} !important;
                                 text-align: center !important;
-                                font-size: 18px !important;
-                                font-weight: 900 !important;
-                                font-family: "Courier New", monospace, sans-serif !important;
-                                color: ${hasValue ? '#1e293b' : '#cbd5e1'} !important;
-                                letter-spacing: 2px !important;
-                                margin-top: 6px !important;
-                                margin-bottom: 6px !important;
-                                background-color: transparent !important;
-                                border: none !important;
+                                width: 100% !important;
+                                line-height: 28px !important;
                             `;
-                            textDiv.textContent = hasValue ? `${h || '00'}:${m || '00'}` : '-- : --';
+                            textSpan.textContent = hasValue ? `${h || '00'}:${m || '00'}` : '--:--';
                             
-                            // 替換掉原本的 div (徹底消滅輸入框)
                             if (container.parentNode) {
-                                container.parentNode.replaceChild(textDiv, container);
+                                container.parentNode.replaceChild(textSpan, container);
                             }
                         }
                     });
 
-                    // 2. 處理上方四個徽章 (球種、組別、地點、時間)
-                    // 強制轉換成最傳統的 inline-block 與 line-height 寫法，捨棄 Flexbox
+                    // 🛠️ 徹底修復右上/左上賽事資訊與徽章的文字偏移與包覆問題
+                    const headerInfoBox = clonedDoc.querySelector('#captureArea .bg-white.rounded-2xl.shadow-md');
+                    if (headerInfoBox) {
+                        headerInfoBox.style.width = '100% !important';
+                        headerInfoBox.style.boxSizing = 'border-box !important';
+                    }
+
                     const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
                     badges.forEach(b => {
-                        // 拔除 tailwind 的 padding, flex 相關 class，避免干擾
-                        b.className = b.className.replace(/inline-flex|items-center|justify-center|px-[0-9]|py-[0-9]/g, '');
-                        
-                        b.style.cssText += `
+                        // 移除所有會造成 flex 排版與 padding 跑版的 class
+                        b.className = 'text-xs font-bold text-slate-800';
+                        b.style.cssText = `
                             display: inline-block !important;
-                            height: 26px !important;
-                            line-height: 26px !important;
-                            padding-left: 12px !important;
-                            padding-right: 12px !important;
-                            font-family: 'Helvetica', 'Arial', sans-serif !important;
+                            position: relative !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            margin: 2px 4px !important;
+                            padding: 4px 12px !important;
+                            line-height: 20px !important;
+                            height: auto !important;
                             text-align: center !important;
                             vertical-align: middle !important;
+                            background-color: #f8fafc !important;
+                            border: 1px solid #cbd5e1 !important;
+                            border-radius: 9999px !important;
+                            font-family: 'Helvetica', 'Arial', sans-serif !important;
                             box-sizing: border-box !important;
                         `;
-                        
-                        // 修正 FontAwesome icon 在 inline-block 下的對齊
-                        const icon = b.querySelector('i');
-                        if (icon) {
-                            icon.style.verticalAlign = 'middle !important';
-                            icon.style.marginRight = '4px !important';
-                            icon.style.position = 'relative !important';
-                            icon.style.top = '-1px !important'; // 微調圖示高度
-                        }
                     });
+
+                    // 特別針對第一個球種徽章背景色保留
+                    const badgeType = clonedDoc.getElementById('badgeType');
+                    if (badgeType) {
+                        const originalBg = document.getElementById('badgeType').className;
+                        if (originalBg.includes('bg-blue-600')) badgeType.style.backgroundColor = '#2563eb';
+                        else if (originalBg.includes('bg-amber-500')) badgeType.style.backgroundColor = '#f59e0b';
+                        else if (originalBg.includes('bg-rose-600')) badgeType.style.backgroundColor = '#e11d48';
+                        else if (originalBg.includes('bg-purple-600')) badgeType.style.backgroundColor = '#9333ea';
+                        else badgeType.style.backgroundColor = '#0f172a';
+                        badgeType.style.color = '#ffffff';
+                    }
                 }
             }).then(canvas => {
+                // 恢復原本樣式
+                captureTarget.style.width = originalWidth;
+                captureTarget.style.height = originalHeight;
+                captureTarget.style.overflow = originalOverflow;
                 const fileName = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
                 const dataUrl = canvas.toDataURL('image/png');
 
