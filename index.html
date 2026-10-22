@@ -472,45 +472,66 @@
                 backgroundColor: '#f1f5f9',
                 windowWidth: 1400,
                 onclone: (clonedDoc) => {
-                    // 🛠️ 專為 html2canvas 截圖優化：修正標籤偏移與移除未填寫時間的 Placeholder
+                    // 🛠️ 終極修復：專為 iOS/iPad/Mac Safari 與 Chrome 優化的輸入框截圖對齊策略
                     const inputs = clonedDoc.querySelectorAll('#scheduleTbody input');
                     inputs.forEach(input => {
                         if (input.classList.contains('hidden') || input.style.display === 'none') return;
 
                         const val = input.value;
-                        // 👉 使用者要求：如果沒有填寫，就顯示空格，不要把「時」和「分」印出來！
                         const textContent = val ? val : '';
 
-                        const div = clonedDoc.createElement('div');
-                        div.className = input.className;
-                        div.textContent = textContent;
-
-                        // 強制 Flex 垂直/水平置中，並重置 line-height 避免下偏
-                        div.style.display = 'flex';
-                        div.style.alignItems = 'center';
-                        div.style.justifyContent = 'center';
-                        div.style.lineHeight = 'normal';
-                        div.style.boxSizing = 'border-box';
+                        // 建立一個取代 input 的 div (不要用 span，div 支援度更好)
+                        const wrapper = clonedDoc.createElement('div');
+                        wrapper.className = input.className; // 繼承原本的 Tailwind class
+                        
+                        // 移除所有可能干擾的 padding 和 margin，並強制重寫 display
+                        wrapper.style.cssText += `
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            line-height: 1 !important;
+                            box-sizing: border-box !important;
+                        `;
+                        
+                        // 讀取原 input 尺寸並套用
+                        const rect = input.getBoundingClientRect();
+                        const h = rect.height > 0 ? rect.height : 28;
+                        const w = rect.width > 0 ? rect.width : 40;
+                        wrapper.style.height = `${h}px`;
+                        wrapper.style.width = `${w}px`;
+                        
+                        // 設定文字
+                        wrapper.textContent = textContent;
 
                         if (!val) {
-                            div.style.color = 'transparent'; // 無字
-                            div.style.backgroundColor = '#ffffff'; // 保留白色輸入框外觀
+                            wrapper.style.color = 'transparent';
+                            wrapper.style.backgroundColor = '#ffffff'; 
                         } else {
-                            div.style.color = '#1e293b'; // slate-800 實體文字
-                            div.style.fontWeight = 'bold';
+                            wrapper.style.color = '#1e293b'; 
+                            wrapper.style.fontWeight = 'bold';
                         }
 
+                        // 將原 input 替換為我們特製的 div
                         if (input.parentNode) {
-                            input.parentNode.replaceChild(div, input);
+                            input.parentNode.replaceChild(wrapper, input);
                         }
                     });
 
-                    // 確保上方的徽章(球種、組別、地區) 也絕對置中不偏移
+                    // 上方的徽章(球種、組別、地區) 也套用 Flex 絕對置中，避免 Safari 跑版
                     const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
                     badges.forEach(b => {
-                        b.style.display = 'flex';
-                        b.style.alignItems = 'center';
-                        b.style.justifyContent = 'center';
+                        b.style.cssText += `
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            padding-top: 0 !important;
+                            padding-bottom: 0 !important;
+                            line-height: 1 !important;
+                        `;
+                        const h = b.getBoundingClientRect().height || 24;
+                        b.style.height = `${h}px`;
                     });
                 }
             }).then(canvas => {
