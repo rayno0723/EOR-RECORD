@@ -232,13 +232,13 @@
                 <div class="bg-white rounded-2xl shadow-md p-3.5 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
                     <div class="space-y-1 w-full lg:w-auto">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span id="badgeType" class="inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
-                            <span id="badgeCategory" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
-                            <span id="badgeRegion" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                <i class="fa-solid fa-location-dot align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayRegion" class="align-middle">--</span>
+                            <span id="badgeType" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeCategory" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
+                            <span id="badgeRegion" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 gap-1">
+                                <i class="fa-solid fa-location-dot text-[10px]"></i> <span id="displayRegion">--</span>
                             </span>
-                            <span id="badgeDate" class="inline-block align-middle text-center h-6 leading-[24px] text-xs text-slate-500 ml-1">
-                                <i class="fa-regular fa-calendar align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayDate" class="align-middle">--</span>
+                            <span id="badgeDate" class="inline-flex items-center justify-center text-xs text-slate-500 ml-1 gap-1">
+                                <i class="fa-regular fa-calendar text-[10px]"></i> <span id="displayDate">--</span>
                             </span>
                         </div>
                         <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
@@ -464,73 +464,78 @@
         // ---------- 📷 將表格區域匯出為圖片 ----------
         function exportImage() {
             const captureTarget = document.getElementById('captureArea');
-            if (!captureTarget || typeof html2canvas !== 'function') {
-                showToast('圖片匯出元件尚未載入，請重新整理頁面後再試', 'error');
-                return;
-            }
-
             showToast('正在生成賽事報表圖片...', 'info');
 
             html2canvas(captureTarget, {
                 scale: 2,
                 useCORS: true,
                 backgroundColor: '#f1f5f9',
-                // 不要固定 windowWidth：固定成 1400 會讓克隆頁面用不同視窗寬度重新排版。
-                // 直接沿用目前頁面的視窗寬度，可減少標籤與表格欄位在匯出時位移。
+                windowWidth: 1400,
                 onclone: (clonedDoc) => {
-                    const cloneWindow = clonedDoc.defaultView;
+                    // 🛠️ 終極結構層級修復 (全平台通用：PC Chrome / Mac / iOS / Android)
+                    // 既然電腦版 Chrome 也會偏移，代表不能用蘋果專屬補丁，而是 html2canvas 對於「單一區塊+邊框」的基準線算錯了。
+                    // 解決方案：放棄單一外框，改用「外框負責邊框形狀 + 內層負責絕對定位文字」的雙層解耦架構。
 
-                    // 以 flex 置中取代 input，避免不同瀏覽器在 Canvas 繪製表單文字時基線不一致。
                     const inputs = clonedDoc.querySelectorAll('#scheduleTbody input');
                     inputs.forEach(input => {
                         if (input.classList.contains('hidden') || input.style.display === 'none') return;
 
-                        const value = input.value || '';
+                        const val = input.value;
+                        const textContent = val ? val : '';
+                        
                         const rect = input.getBoundingClientRect();
-                        const computed = cloneWindow
-                            ? cloneWindow.getComputedStyle(input)
-                            : null;
-                        const width = rect.width || parseFloat(computed?.width) || 40;
-                        const height = rect.height || parseFloat(computed?.height) || 28;
+                        const h = rect.height > 0 ? rect.height : 28;
+                        const w = rect.width > 0 ? rect.width : 40;
+                        const computedStyle = window.getComputedStyle(input);
+                        const fontSize = computedStyle.fontSize || '16px';
 
+                        // 1. 建立外框 (負責背景、邊框、圓角)
                         const wrapper = clonedDoc.createElement('div');
-                        wrapper.className = input.className;
-                        wrapper.textContent = value;
-                        wrapper.setAttribute('aria-hidden', 'true');
-                        wrapper.style.cssText = `
+                        // 移除 Tailwind 的 padding (px-1, py-1)，避免干擾內部絕對定位
+                        wrapper.className = input.className.replace(/p[xy]-[0-9]/g, '');
+                        wrapper.style.cssText += `
+                            position: relative !important;
+                            display: block !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            height: ${h}px !important;
+                            width: ${w}px !important;
+                            box-sizing: border-box !important;
+                            overflow: hidden !important;
+                        `;
+                        
+                        // 2. 建立內層文字 (負責絕對置中)
+                        const inner = clonedDoc.createElement('div');
+                        inner.style.cssText = `
+                            position: absolute !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            bottom: 0 !important;
                             display: flex !important;
                             align-items: center !important;
                             justify-content: center !important;
-                            flex: 0 0 ${width}px !important;
-                            width: ${width}px !important;
-                            min-width: ${width}px !important;
-                            max-width: ${width}px !important;
-                            height: ${height}px !important;
-                            box-sizing: border-box !important;
-                            padding: 0 !important;
+                            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+                            font-size: ${fontSize} !important;
+                            color: ${textContent ? '#1e293b' : 'transparent'} !important;
+                            font-weight: bold !important;
+                            line-height: 1 !important;
                             margin: 0 !important;
-                            line-height: normal !important;
-                            white-space: nowrap !important;
-                            overflow: hidden !important;
-                            color: ${value ? '#1e293b' : 'transparent'} !important;
-                            background-color: #ffffff !important;
-                            ${computed ? `font-family: ${computed.fontFamily}; font-size: ${computed.fontSize}; font-weight: ${computed.fontWeight}; letter-spacing: ${computed.letterSpacing};` : ''}
+                            padding: 0 !important;
                         `;
+                        inner.textContent = textContent;
+                        
+                        wrapper.appendChild(inner);
 
-                        // 保留原輸入框的邊框、圓角與字體 class，只把文字對齊方式改為真正的水平／垂直置中。
-                        input.parentNode?.replaceChild(wrapper, input);
+                        if (input.parentNode) {
+                            input.parentNode.replaceChild(wrapper, input);
+                        }
                     });
 
-                    // 小型資訊標籤也改用 flex 置中，避免 inline-block 的文字基線在 Canvas 中偏低。
-                    ['#badgeType', '#badgeCategory', '#badgeRegion', '#badgeDate'].forEach(selector => {
-                        const badge = clonedDoc.querySelector(selector);
-                        if (!badge) return;
-                        badge.style.setProperty('display', 'inline-flex', 'important');
-                        badge.style.setProperty('align-items', 'center', 'important');
-                        badge.style.setProperty('justify-content', 'center', 'important');
-                        badge.style.setProperty('vertical-align', 'middle', 'important');
-                        badge.style.setProperty('line-height', 'normal', 'important');
-                        badge.style.setProperty('box-sizing', 'border-box', 'important');
+                    // 上方徽章移除任何 JS 偏移，回歸最原始設定
+                    const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
+                    badges.forEach(b => {
+                        b.style.fontFamily = "'Helvetica', 'Arial', sans-serif";
                     });
                 }
             }).then(canvas => {
@@ -540,15 +545,21 @@
                 canvas.toBlob((blob) => {
                     const blobUrl = blob ? URL.createObjectURL(blob) : dataUrl;
 
+                    // 1. 設定彈窗預覽圖片與下載連結
                     const previewImg = document.getElementById('previewImg');
                     const downloadBtn = document.getElementById('downloadImgBtn');
+                    
                     previewImg.src = dataUrl;
                     downloadBtn.href = blobUrl;
                     downloadBtn.download = fileName;
+
+                    // 2. 顯示圖片預覽彈窗 (相容 iPad / iOS Safari / Android)
                     document.getElementById('imageModal').classList.remove('hidden');
 
-                    const isTouchMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) ||
+                    // 3. 電腦版自動觸發下載；行動裝置 (iPad/iOS/Android) 顯示提示選單
+                    const isTouchMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || 
                                           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
                     if (!isTouchMobile) {
                         const link = document.createElement('a');
                         link.href = blobUrl;
@@ -966,7 +977,7 @@
             document.getElementById('thDurationDisplay').innerText = `(+${conf.roundDuration || 25}分)`;
 
             const badgeType = document.getElementById('badgeType');
-            badgeType.className = 'inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white ';
+            badgeType.className = 'inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold text-white ';
             switch (conf.type) {
                 case '超級球': badgeType.classList.add('bg-blue-600'); break;
                 case '高級球': badgeType.classList.add('bg-amber-500'); break;
@@ -989,8 +1000,11 @@
                 }
             }
 
-            document.getElementById('step1Page').classList.add('hidden');
+            // 🛠️ 修正切換邏輯：確保正確隱藏第二頁(表格)，顯示第一頁(設定)
+            document.getElementById('step2Page').classList.add('hidden');
             document.getElementById('step1Page').classList.remove('hidden');
+            
+            // 重新載入歷史列表以顯示最新狀態
             renderHistoryList();
         }
 
