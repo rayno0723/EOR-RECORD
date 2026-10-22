@@ -562,18 +562,16 @@
                         `;
 
                         cleanHeader.innerHTML = `
-                            <div>
-                                <div style="font-size: 14px; font-weight: bold; color: #475569; margin-bottom: 4px;">
-                                    📌 賽事資訊：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${typeText}</span> 
-                                    組別：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">${catText}</span>
-                                    地區：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${regionText}</span>
+                            <div style="width: 100%;">
+                                <div style="font-size: 15px; font-weight: bold; color: #475569; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+                                    <span>📌 賽事資訊：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${typeText}</span></span>
+                                    <span>📅 日期：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${dateText}</span></span>
+                                    <span>組別：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${catText}</span></span>
+                                    <span>地區：<span style="color: #1e293b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${regionText}</span></span>
                                 </div>
                                 <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 4px;">
                                     賽事時間效率明細表 <span style="font-size: 14px; font-weight: normal; color: #64748b;">(共 ${roundsText} 輪)</span>
                                 </div>
-                            </div>
-                            <div style="text-align: right; font-size: 15px; font-weight: bold; color: #64748b;">
-                                📅 日期：${dateText}
                             </div>
                         `;
 
