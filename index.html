@@ -232,13 +232,13 @@
                 <div class="bg-white rounded-2xl shadow-md p-3.5 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
                     <div class="space-y-1 w-full lg:w-auto">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span id="badgeType" class="px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
-                            <span id="badgeCategory" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
-                            <span id="badgeRegion" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                                <i class="fa-solid fa-location-dot"></i> <span id="displayRegion">--</span>
+                            <span id="badgeType" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold text-white bg-slate-700 leading-none h-6">--</span>
+                            <span id="badgeCategory" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 leading-none h-6">--</span>
+                            <span id="badgeRegion" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 gap-1 leading-none h-6">
+                                <i class="fa-solid fa-location-dot mt-px"></i> <span id="displayRegion" class="leading-none mt-px">--</span>
                             </span>
-                            <span id="badgeDate" class="text-xs text-slate-500 flex items-center gap-1 ml-0.5">
-                                <i class="fa-regular fa-calendar"></i> <span id="displayDate">--</span>
+                            <span id="badgeDate" class="text-xs text-slate-500 inline-flex items-center justify-center gap-1 ml-0.5 leading-none h-6">
+                                <i class="fa-regular fa-calendar mt-px"></i> <span id="displayDate" class="leading-none mt-px">--</span>
                             </span>
                         </div>
                         <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
@@ -472,30 +472,29 @@
                 backgroundColor: '#f1f5f9',
                 windowWidth: 1400,
                 onclone: (clonedDoc) => {
-                    // 🛠️ 專為 html2canvas 截圖優化：將輸入框轉為 div 避免文字/Placeholder 向上偏移
+                    // 🛠️ 專為 html2canvas 截圖優化：修正標籤偏移與移除未填寫時間的 Placeholder
                     const inputs = clonedDoc.querySelectorAll('#scheduleTbody input');
                     inputs.forEach(input => {
                         if (input.classList.contains('hidden') || input.style.display === 'none') return;
 
                         const val = input.value;
-                        const placeholder = input.placeholder || '';
-                        const textContent = val ? val : placeholder;
+                        // 👉 使用者要求：如果沒有填寫，就顯示空格，不要把「時」和「分」印出來！
+                        const textContent = val ? val : '';
 
                         const div = clonedDoc.createElement('div');
                         div.className = input.className;
                         div.textContent = textContent;
 
-                        // 設置置中 Flex 排版
-                        div.style.display = 'inline-flex';
+                        // 強制 Flex 垂直/水平置中，並重置 line-height 避免下偏
+                        div.style.display = 'flex';
                         div.style.alignItems = 'center';
                         div.style.justifyContent = 'center';
-                        div.style.lineHeight = '1';
-                        div.style.padding = '0';
+                        div.style.lineHeight = 'normal';
                         div.style.boxSizing = 'border-box';
 
-                        if (!val && placeholder) {
-                            div.style.color = '#94a3b8'; // slate-400 placeholder 灰色
-                            div.style.fontWeight = 'normal';
+                        if (!val) {
+                            div.style.color = 'transparent'; // 無字
+                            div.style.backgroundColor = '#ffffff'; // 保留白色輸入框外觀
                         } else {
                             div.style.color = '#1e293b'; // slate-800 實體文字
                             div.style.fontWeight = 'bold';
@@ -504,6 +503,14 @@
                         if (input.parentNode) {
                             input.parentNode.replaceChild(div, input);
                         }
+                    });
+
+                    // 確保上方的徽章(球種、組別、地區) 也絕對置中不偏移
+                    const badges = clonedDoc.querySelectorAll('#badgeType, #badgeCategory, #badgeRegion, #badgeDate');
+                    badges.forEach(b => {
+                        b.style.display = 'flex';
+                        b.style.alignItems = 'center';
+                        b.style.justifyContent = 'center';
                     });
                 }
             }).then(canvas => {
@@ -945,7 +952,7 @@
             document.getElementById('thDurationDisplay').innerText = `(+${conf.roundDuration || 25}分)`;
 
             const badgeType = document.getElementById('badgeType');
-            badgeType.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold text-white ';
+            badgeType.className = 'inline-flex items-center justify-center leading-none h-6 px-2.5 py-0.5 rounded-full text-xs font-bold text-white ';
             switch (conf.type) {
                 case '超級球': badgeType.classList.add('bg-blue-600'); break;
                 case '高級球': badgeType.classList.add('bg-amber-500'); break;
