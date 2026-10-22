@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>賽事輪次時間紀錄與效率檢核工具</title>
+
+    <!-- 🍏 iOS 專屬：允許全螢幕獨立 App 模式 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EOR-RECORD">
+
+    <!-- 🚫 強制瀏覽器不快取 HTML 頁面 -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 📷 引入 html2canvas 網頁截圖函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        poke: {
+                            great: '#2b6cb0',
+                            ultra: '#d69e2e',
+                            premier: '#e53e3e',
+                            master: '#805ad5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 📱 手機與平板觸控體驗極致優化 */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+        }
+
+        /* 順暢雙向滾動條 */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 10px;
+            width: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 6px;
+        }
+
+        /* 讓輸入框穿透觸控滑動 */
+        .input-touch-pass {
+            touch-action: pan-x pan-y;
+        }
+        
+        /* 隱藏預設箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* 🛠️ 修正輸入框隱藏權重與基線對齊 */
+        input {
+            line-height: normal;
+        }
+        input.hidden, select.hidden, .hidden {
+            display: none !important;
+        }
+
+        /* 📱 手機窄螢幕微調 RWD layout */
+        @media (max-width: 640px) {
+            .mobile-compact-padding {
+                padding-left: 0.25rem !important;
+                padding-right: 0.25rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col text-base">
+
+    <!-- Datalists for hours and minutes -->
+    <datalist id="dl-hours"></datalist>
+    <datalist id="dl-mins"></datalist>
+
+    <!-- 頂部 Header -->
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-3.5 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm shrink-0">
+                    <i class="fa-solid fa-stopwatch text-xl md:text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base md:text-2xl font-bold tracking-wide">賽事時間效率檢核系統</h1>
+                    <p class="text-[11px] md:text-sm text-slate-400">離線本機資料儲存與時間落差計算</p>
+                </div>
+            </div>
+            <div id="statusBadge" class="hidden md:flex items-center gap-2 text-xs md:text-sm bg-slate-800 text-emerald-400 px-3.5 py-1.5 rounded-full border border-slate-700">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                資料已自動儲存
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-2 md:p-6">
+
+        <!-- 第一層：賽事設定頁面 -->
+        <section id="step1Page" class="space-y-4 md:space-y-6">
+            <div class="bg-white rounded-2xl shadow-md p-4 md:p-8 border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-4 mb-5 gap-3">
+                    <div>
+                        <h2 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-indigo-600"></i> 新增/設定賽事資訊
+                        </h2>
+                        <p class="text-xs md:text-base text-slate-500 mt-0.5">填寫賽事參數建立表格，或匯入 JSON 檔</p>
+                    </div>
+                    <!-- 第一層匯入 JSON 按鈕 -->
+                    <button type="button" onclick="triggerImportJson()" class="w-full md:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-file-import"></i> 匯入外部 JSON 賽事檔
+                    </button>
+                </div>
+
+                <form id="configForm" onsubmit="event.preventDefault(); startTournament();" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
+                        <!-- 1. 賽事日期 -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">1. 賽事日期</label>
+                            <input type="date" id="inputDate" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+
+                        <!-- 2. 地區 / 場館 -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">2. 地區 / 場館</label>
+                            <input type="text" id="inputRegion" placeholder="例：台北圓山" maxlength="10" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+
+                        <!-- 3. 賽事種類 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-xs md:text-sm font-bold text-slate-700">3. 賽事種類</label>
+                                <div class="flex gap-3 text-xs">
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="radio" name="gameCategory" value="pokemon" checked onchange="toggleGameType()" class="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                                        <span class="ml-1 font-medium text-slate-600">寶可夢</span>
+                                    </label>
+                                    <label class="inline-flex items-center cursor-pointer">
+                                        <input type="radio" name="gameCategory" value="other" onchange="toggleGameType()" class="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                                        <span class="ml-1 font-medium text-slate-600">其他賽事</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <select id="inputTypePoke" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                                <option value="超級球">超級球 (Great Ball)</option>
+                                <option value="高級球">高級球 (Ultra Ball)</option>
+                                <option value="紀念球">紀念球 (Premier Ball)</option>
+                                <option value="大師球">大師球 (Master Ball)</option>
+                            </select>
+                            <input type="text" id="inputTypeOther" placeholder="輸入賽事名稱 (例：航海王旗艦賽)" class="hidden w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+
+                        <!-- 4. 組別 -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">4. 組別</label>
+                            <input type="text" id="inputCategory" placeholder="例：大師組, 公開組" required value="大師組"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+
+                        <!-- 5. 總輪次數 -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">5. 總輪次數</label>
+                            <input type="number" id="inputRounds" min="1" max="20" value="6" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+
+                        <!-- 6. 每輪時間 (分) -->
+                        <div>
+                            <label class="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">6. 每輪時間 (分)</label>
+                            <input type="number" id="inputDuration" min="1" max="120" value="25" required
+                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-end">
+                        <button type="submit" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-base px-8 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md">
+                            <i class="fa-solid fa-table-cells"></i> 產生時間表並開始紀錄
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 歷史紀錄管理 -->
+            <div class="bg-white rounded-2xl shadow-md p-4 md:p-8 border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-3 mb-4 gap-2">
+                    <div>
+                        <h3 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-slate-600"></i> 本機儲存賽事紀錄
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">點擊重新載入歷史資料</p>
+                    </div>
+                    <button onclick="clearAllHistory()" class="w-full md:w-auto text-xs md:text-sm text-rose-600 hover:text-rose-800 border border-rose-200 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-colors font-medium text-center">
+                        <i class="fa-solid fa-trash-can"></i> 清除所有紀錄
+                    </button>
+                </div>
+                <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </div>
+        </section>
+
+        <!-- 第二層：輪次時間表頁面 -->
+        <section id="step2Page" class="space-y-3 md:space-y-4 hidden">
+            <!-- 欲截圖匯出的完整區域範圍 id="captureArea" -->
+            <div id="captureArea" class="space-y-3 md:space-y-4 p-1 md:p-2 bg-slate-100 rounded-2xl">
+                <!-- 頂部資訊欄 -->
+                <div class="bg-white rounded-2xl shadow-md p-3.5 md:p-6 border border-slate-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                    <div class="space-y-1 w-full lg:w-auto">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span id="badgeType" class="inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeCategory" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
+                            <span id="badgeRegion" class="inline-block align-middle text-center h-6 leading-[22px] px-3 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                <i class="fa-solid fa-location-dot align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayRegion" class="align-middle">--</span>
+                            </span>
+                            <span id="badgeDate" class="inline-block align-middle text-center h-6 leading-[24px] text-xs text-slate-500 ml-1">
+                                <i class="fa-regular fa-calendar align-middle text-[10px]" style="position: relative; top: -1px;"></i> <span id="displayDate" class="align-middle">--</span>
+                            </span>
+                        </div>
+                        <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
+                            賽事時間效率明細表
+                            <span class="text-sm font-normal text-slate-500">(共 <span id="displayRounds">0</span> 輪)</span>
+                        </h2>
+                    </div>
+
+                    <!-- 📱 手機端採 2 欄按鈕網格流線型呈現 -->
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto" data-html2canvas-ignore="true">
+                        <button onclick="switchToStep1()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-300">
+                            <i class="fa-solid fa-arrow-left"></i> 返回設定
+                        </button>
+                        
+                        <!-- 📷 匯出 PNG 圖片按鈕 -->
+                        <button onclick="exportImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-camera"></i> 匯出圖片
+                        </button>
+
+                        <!-- 第二層匯入 JSON 按鈕 -->
+                        <button onclick="triggerImportJson()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-import"></i> 匯入 JSON
+                        </button>
+                        <button onclick="exportJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-300">
+                            <i class="fa-solid fa-file-code"></i> 匯出 JSON
+                        </button>
+                        <button onclick="exportCSV()" class="col-span-2 sm:col-span-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-file-csv"></i> 匯出 CSV 報表
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 時間表主要表格 (📱 手機橫向滾動+凍結第一欄) -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
+                        <table class="w-full text-xs md:text-base text-left border-collapse min-w-[1100px] md:min-w-[1360px]">
+                            <thead class="text-xs md:text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
+                                <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
+                                    <th scope="col" class="py-2.5 px-2 w-14 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-bullhorn mr-0.5"></i> 配對公布區</span>
+                                            <button onclick="clearSectionData('announce')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1 py-0.5 rounded border border-blue-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-flag-checkered mr-0.5"></i> 開賽時程區</span>
+                                            <button onclick="clearSectionData('start')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1 py-0.5 rounded border border-emerald-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <span><i class="fa-solid fa-clock mr-0.5"></i> 比賽與結束區</span>
+                                            <button onclick="clearSectionData('end')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1 py-0.5 rounded border border-purple-400/40 transition-colors">
+                                                <i class="fa-solid fa-eraser"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    <th scope="col" colspan="2" class="py-2.5 px-1 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500 leading-tight">
+                                        <i class="fa-solid fa-hourglass-half mr-0.5"></i> 桌次時間區<br>
+                                        <span id="thDurationDisplay" class="text-[10px] text-amber-300 font-normal">(--分)</span>
+                                    </th>
+                                </tr>
+                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200 text-[11px] md:text-xs">
+                                    <th class="py-2 px-1 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
+                                    
+                                    <th class="py-2 px-1 bg-blue-950/40 w-36 md:w-44">預計公布配對</th>
+                                    <th class="py-2 px-1 bg-blue-950/40 w-40 md:w-48">實際公布配對</th>
+                                    <th class="py-2 px-1 bg-blue-900/60 w-28 md:w-32 text-blue-200">配對時間差</th>
+
+                                    <th class="py-2 px-1 bg-emerald-950/40 w-36 md:w-44">預計開賽</th>
+                                    <th class="py-2 px-1 bg-emerald-950/40 w-40 md:w-48">實際開賽</th>
+                                    <th class="py-2 px-1 bg-emerald-900/60 w-28 md:w-32 text-emerald-200">開賽時間差</th>
+
+                                    <th class="py-2 px-1 bg-purple-950/40 w-36 md:w-44">預計輪次結束</th>
+                                    <th class="py-2 px-1 bg-purple-950/40 w-40 md:w-48">最後成績回報</th>
+                                    <th class="py-2 px-1 bg-purple-900/60 w-28 md:w-32 text-purple-200">輪內時間差</th>
+
+                                    <th class="py-2 px-1 bg-amber-950/40 w-32 md:w-44">比賽時間到</th>
+                                    <th class="py-2 px-1 bg-amber-900/60 w-32 md:w-36 text-amber-200">與桌次時間差</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
+                                <!-- 動態生成輪次列 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI 賽事效率分析 Agent 區塊 -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl shadow-xl p-4 md:p-8 border border-slate-700 mt-4 md:mt-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-700 pb-3 mb-3 gap-3">
+                    <div>
+                        <h3 class="text-base md:text-xl font-bold flex items-center gap-2 text-indigo-300">
+                            <i class="fa-solid fa-robot"></i> AI 賽事效率分析 Agent
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">智慧診斷延誤連鎖反應，提供賽事管理建議</p>
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="promptApiKey()" class="flex-1 md:flex-initial bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-xl text-xs md:text-sm font-medium transition-colors border border-slate-600">
+                            <i class="fa-solid fa-key"></i> 設定 API Key
+                        </button>
+                        <button onclick="runAIAgent()" class="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-bold transition-colors shadow-md">
+                            <i class="fa-solid fa-bolt"></i> 執行診斷
+                        </button>
+                    </div>
+                </div>
+                <div id="aiReportBox" class="hidden bg-slate-800/50 rounded-xl p-3 md:p-6 border border-slate-600">
+                    <!-- AI 報告內容 -->
+                </div>
+            </div>
+            
+        </section>
+
+    </main>
+
+    
+    <!-- 📷 圖片匯出預覽與儲存彈窗 (iPad / iOS / Android 全平台相容) -->
+    <div id="imageModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-base md:text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-image text-indigo-400"></i> 賽事報表圖片已生成
+                </h3>
+                <button onclick="closeImageModal()" class="text-slate-400 hover:text-white text-xl px-2 py-1 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-3.5 bg-amber-50 border-b border-amber-200 text-xs md:text-sm text-amber-900 flex items-center gap-2.5 shrink-0">
+                <i class="fa-solid fa-mobile-screen-button text-amber-600 text-base shrink-0"></i>
+                <span><b>iPad / iOS / Android 手機用戶：</b>請<b>長按下方圖片</b>，點選<b>「加入照片」</b>或<b>「儲存圖片」</b>即可存入相簿！</span>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow flex justify-center items-center bg-slate-100">
+                <img id="previewImg" src="" alt="賽事報表預覽" class="max-w-full h-auto rounded-xl shadow-md border border-slate-300">
+            </div>
+            <div class="p-3 md:p-4 bg-white border-t border-slate-200 flex flex-wrap justify-end gap-2.5 shrink-0">
+                <button onclick="closeImageModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                    關閉窗口
+                </button>
+                <a id="downloadImgBtn" href="" download="" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-download"></i> 直接下載檔案
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 訊息提示 Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md bg-slate-900 text-white text-xs md:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2 justify-center sm:justify-start">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base md:text-lg"></i>
+        <span id="toastMsg">提示訊息</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'TOURNAMENT_TIMER_DATA_V1';
+        const API_KEY_STORE = 'GEMINI_API_KEY';
+        
+        let currentData = {
+            id: null,
+            config: {
+                date: new Date().toISOString().split('T')[0],
+                region: '',
+                type: '超級球',
+                rounds: 6,
+                category: '大師組',
+                roundDuration: 25
+            },
+            roundsData: []
+        };
+
+        window.onload = function() {
+            document.getElementById('inputDate').value = currentData.config.date;
+            initDatalists();
+            renderHistoryList();
+            toggleGameType();
+        };
+
+        // UI Toggle for Tournament Type
+        function toggleGameType() {
+            const catEl = document.querySelector('input[name="gameCategory"]:checked');
+            if (!catEl) return;
+            const cat = catEl.value;
+            const inputPoke = document.getElementById('inputTypePoke');
+            const inputOther = document.getElementById('inputTypeOther');
+            
+            if (cat === 'pokemon') {
+                inputPoke.classList.remove('hidden');
+                inputPoke.style.display = '';
+                inputOther.classList.add('hidden');
+                inputOther.style.display = 'none';
+                inputOther.required = false;
+            } else {
+                inputPoke.classList.add('hidden');
+                inputPoke.style.display = 'none';
+                inputOther.classList.remove('hidden');
+                inputOther.style.display = '';
+                inputOther.required = true;
+                inputOther.focus();
+            }
+        }
+
+        // 初始化 datalist 選項
+        function initDatalists() {
+            let hHTML = '';
+            for(let i=0; i<24; i++) {
+                hHTML += `<option value="${String(i).padStart(2, '0')}"></option>`;
+            }
+            document.getElementById('dl-hours').innerHTML = hHTML;
+
+            let mHTML = '';
+            for(let i=0; i<60; i++) {
+                mHTML += `<option value="${String(i).padStart(2, '0')}"></option>`;
+            }
+            document.getElementById('dl-mins').innerHTML = mHTML;
+        }
+
+        // ---------- 📷 將表格區域匯出為圖片 ----------
+        function exportImage() {
+            const captureTarget = document.getElementById('captureArea');
+            if (!captureTarget || typeof html2canvas !== 'function') {
+                showToast('圖片匯出元件尚未載入，請重新整理頁面後再試', 'error');
+                return;
+            }
+
+            showToast('正在生成賽事報表圖片...', 'info');
+
+            html2canvas(captureTarget, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f1f5f9',
+                // 不要固定 windowWidth：固定成 1400 會讓克隆頁面用不同視窗寬度重新排版。
+                // 直接沿用目前頁面的視窗寬度，可減少標籤與表格欄位在匯出時位移。
+                onclone: (clonedDoc) => {
+                    const cloneWindow = clonedDoc.defaultView;
+
+                    // 以 flex 置中取代 input，避免不同瀏覽器在 Canvas 繪製表單文字時基線不一致。
+                    const inputs = clonedDoc.querySelectorAll('#scheduleTbody input');
+                    inputs.forEach(input => {
+                        if (input.classList.contains('hidden') || input.style.display === 'none') return;
+
+                        const value = input.value || '';
+                        const rect = input.getBoundingClientRect();
+                        const computed = cloneWindow
+                            ? cloneWindow.getComputedStyle(input)
+                            : null;
+                        const width = rect.width || parseFloat(computed?.width) || 40;
+                        const height = rect.height || parseFloat(computed?.height) || 28;
+
+                        const wrapper = clonedDoc.createElement('div');
+                        wrapper.className = input.className;
+                        wrapper.textContent = value;
+                        wrapper.setAttribute('aria-hidden', 'true');
+                        wrapper.style.cssText = `
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            flex: 0 0 ${width}px !important;
+                            width: ${width}px !important;
+                            min-width: ${width}px !important;
+                            max-width: ${width}px !important;
+                            height: ${height}px !important;
+                            box-sizing: border-box !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            line-height: normal !important;
+                            white-space: nowrap !important;
+                            overflow: hidden !important;
+                            color: ${value ? '#1e293b' : 'transparent'} !important;
+                            background-color: #ffffff !important;
+                            ${computed ? `font-family: ${computed.fontFamily}; font-size: ${computed.fontSize}; font-weight: ${computed.fontWeight}; letter-spacing: ${computed.letterSpacing};` : ''}
+                        `;
+
+                        // 保留原輸入框的邊框、圓角與字體 class，只把文字對齊方式改為真正的水平／垂直置中。
+                        input.parentNode?.replaceChild(wrapper, input);
+                    });
+
+                    // 小型資訊標籤也改用 flex 置中，避免 inline-block 的文字基線在 Canvas 中偏低。
+                    ['#badgeType', '#badgeCategory', '#badgeRegion', '#badgeDate'].forEach(selector => {
+                        const badge = clonedDoc.querySelector(selector);
+                        if (!badge) return;
+                        badge.style.setProperty('display', 'inline-flex', 'important');
+                        badge.style.setProperty('align-items', 'center', 'important');
+                        badge.style.setProperty('justify-content', 'center', 'important');
+                        badge.style.setProperty('vertical-align', 'middle', 'important');
+                        badge.style.setProperty('line-height', 'normal', 'important');
+                        badge.style.setProperty('box-sizing', 'border-box', 'important');
+                    });
+                }
+            }).then(canvas => {
+                const fileName = `賽事時間報表_${currentData.config.region}_${currentData.config.date}.png`;
+                const dataUrl = canvas.toDataURL('image/png');
+
+                canvas.toBlob((blob) => {
+                    const blobUrl = blob ? URL.createObjectURL(blob) : dataUrl;
+
+                    const previewImg = document.getElementById('previewImg');
+                    const downloadBtn = document.getElementById('downloadImgBtn');
+                    previewImg.src = dataUrl;
+                    downloadBtn.href = blobUrl;
+                    downloadBtn.download = fileName;
+                    document.getElementById('imageModal').classList.remove('hidden');
+
+                    const isTouchMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) ||
+                                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                    if (!isTouchMobile) {
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = fileName;
+                        link.click();
+                        showToast('已匯出高畫質圖片！');
+                    } else {
+                        showToast('圖片已生成！長按圖片即可儲存至相簿', 'success');
+                    }
+                }, 'image/png');
+            }).catch(err => {
+                console.error('Canvas export error:', err);
+                showToast('圖片生成失敗，請再試一次', 'error');
+            });
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.add('hidden');
+        }
+
+        // ---------- 🧹 各區標頭按鈕專用：分區清除數據 ----------
+        function clearSectionData(type) {
+            if (!currentData.roundsData || currentData.roundsData.length === 0) return;
+
+            let labelName = '';
+            if (type === 'announce') labelName = '「配對公布區」';
+            else if (type === 'start') labelName = '「開賽時程區」';
+            else if (type === 'end') labelName = '「比賽與結束區」';
+
+            if (confirm(`確定要清除所有輪次的 ${labelName} 資料嗎？`)) {
+                currentData.roundsData.forEach(row => {
+                    if (type === 'announce') {
+                        row.p_announce = '';
+                        row.a_announce = '';
+                    }
+                    if (type === 'start') {
+                        row.p_start = '';
+                        row.a_start = '';
+                    }
+                    if (type === 'end') {
+                        row.all_clear = '';
+                        row.p_round_end = '';
+                    }
+                });
+
+                saveCurrentData();
+                renderTable();
+                showToast(`已清空 ${labelName} 資料`);
+            }
+        }
+
+        // ---------- 匯入 JSON 檔案功能 ----------
+        function triggerImportJson() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = handleImportFile;
+            input.click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedObj = JSON.parse(e.target.result);
+
+                    let validConfig = importedObj.config || tournamentDataToConfig(importedObj);
+                    let validRounds = importedObj.roundsData || importedObj.roundRows || [];
+
+                    if (!validConfig || !validConfig.region) {
+                        throw new Error('格式缺少賽事基本資訊');
+                    }
+
+                    const newId = 'tm_' + Date.now();
+                    currentData = {
+                        id: newId,
+                        config: {
+                            date: validConfig.date || new Date().toISOString().split('T')[0],
+                            region: validConfig.region || '未命名賽事',
+                            type: validConfig.matchType || validConfig.type || '超級球',
+                            rounds: validRounds.length || validConfig.rounds || 6,
+                            category: validConfig.division || validConfig.category || '大師組',
+                            roundDuration: validConfig.roundDuration || 25
+                        },
+                        roundsData: normalizeRoundsData(validRounds)
+                    };
+
+                    saveCurrentData();
+                    switchToStep2();
+                    showToast('已成功匯入賽事 JSON 檔案！');
+                } catch (err) {
+                    showToast('匯入失敗：JSON 格式無效或不相容', 'error');
+                    console.error('JSON Import Error:', err);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function normalizeRoundsData(rawRounds) {
+            return rawRounds.map((r, i) => ({
+                roundNum: r.roundNum || (i + 1),
+                p_announce: r.p_announce !== undefined ? r.p_announce : combineHM(r.planPubH, r.planPubM),
+                a_announce: r.a_announce !== undefined ? r.a_announce : combineHM(r.actPubH, r.actPubM),
+                p_start: r.p_start !== undefined ? r.p_start : combineHM(r.planStartH, r.planStartM),
+                a_start: r.a_start !== undefined ? r.a_start : combineHM(r.actStartH, r.actStartM),
+                all_clear: r.all_clear !== undefined ? r.all_clear : combineHM(r.completeH, r.completeM),
+                p_round_end: r.p_round_end !== undefined ? r.p_round_end : combineHM(r.planEndH, r.planEndM)
+            }));
+        }
+
+        function combineHM(h, m) {
+            if (!h && !m) return '';
+            return `${String(h || '00').padStart(2, '0')}:${String(m || '00').padStart(2, '0')}`;
+        }
+
+        function tournamentDataToConfig(obj) {
+            if (obj.date && obj.location) {
+                return {
+                    date: obj.date,
+                    region: obj.location,
+                    type: obj.matchType,
+                    rounds: obj.rounds,
+                    category: obj.division,
+                    roundDuration: 25
+                };
+            }
+            return null;
+        }
+
+        // ---------- 📱 手機優化版雙模態輸入框 ----------
+        function buildTimeInputHTML(roundIndex, fieldName, value, showNowButton = false) {
+            let [h, m] = value ? value.split(':') : ['', ''];
+            
+            return `
+                <div class="flex items-center justify-center gap-0.5 md:gap-1">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-hours" maxlength="2" placeholder="時" value="${h}"
+                           onfocus="this.select()"
+                           onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'h')"
+                           class="w-10 md:w-12 bg-white border border-slate-300 rounded-md md:rounded-lg px-1 py-1 text-center text-xs md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                    <span class="text-slate-300 font-bold text-xs md:text-sm">:</span>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" list="dl-mins" maxlength="2" placeholder="分" value="${m}"
+                           onfocus="this.select()"
+                           onblur="handleTimeBlur(this, ${roundIndex}, '${fieldName}', 'm')"
+                           class="w-10 md:w-12 bg-white border border-slate-300 rounded-md md:rounded-lg px-1 py-1 text-center text-xs md:text-base font-bold focus:ring-2 focus:ring-indigo-500 font-mono text-slate-800 shadow-inner placeholder:font-normal input-touch-pass">
+                    
+                    ${showNowButton ? `
+                        <button type="button" onclick="fillNowTime(${roundIndex}, '${fieldName}')" 
+                                title="填入現在時間" data-html2canvas-ignore="true"
+                                class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 text-[10px] md:text-xs px-1.5 py-1 rounded-md md:rounded-lg font-bold transition-all shrink-0 shadow-sm active:scale-95 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-bolt text-amber-500 text-[10px] md:text-xs"></i>
+                            <span>NOW</span>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function fillNowTime(roundIndex, fieldName) {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            
+            // 實際時間允許提早或依現場隨時紀錄，直接寫入
+            currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
+            saveCurrentData();
+            renderTable();
+            showToast(`已填入現在時間 (${h}:${m})`);
+        }
+
+        // 核心防呆機制：針對所有預計時間（公布 -> 開賽 -> 結束）跨區塊、跨輪次進行嚴格順序檢查
+        function checkPlannedSequenceValidation(roundIndex, fieldName, newTimeStr) {
+            if (!newTimeStr || !['p_announce', 'p_start', 'p_round_end'].includes(fieldName)) {
+                return { valid: true };
+            }
+
+            const newMin = parseToMinutes(newTimeStr);
+            if (newMin === null) return { valid: true };
+
+            const planOrder = ['p_announce', 'p_start', 'p_round_end'];
+            const fieldLabels = {
+                'p_announce': '預計公布配對',
+                'p_start': '預計開賽',
+                'p_round_end': '預計輪次結束'
+            };
+
+            const targetSeqIndex = roundIndex * 3 + planOrder.indexOf(fieldName);
+            const targetLabel = `R${roundIndex + 1} ${fieldLabels[fieldName]}`;
+
+            let prevMax = null; // 在當前填寫項目之前的最後一個有值的預計時間
+            let nextMin = null; // 在當前填寫項目之後的第一個有值的預計時間
+
+            currentData.roundsData.forEach((row, rIdx) => {
+                planOrder.forEach((fName, fIdx) => {
+                    const seqIndex = rIdx * 3 + fIdx;
+                    if (seqIndex === targetSeqIndex) return;
+
+                    const val = row[fName];
+                    if (val && val.includes(':')) {
+                        const minVal = parseToMinutes(val);
+                        if (minVal !== null) {
+                            const label = `R${rIdx + 1} ${fieldLabels[fName]}`;
+                            const item = { seqIndex, minVal, val, label };
+
+                            if (seqIndex < targetSeqIndex) {
+                                if (!prevMax || seqIndex > prevMax.seqIndex) {
+                                    prevMax = item;
+                                }
+                            } else if (seqIndex > targetSeqIndex) {
+                                if (!nextMin || seqIndex < nextMin.seqIndex) {
+                                    nextMin = item;
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            // 檢查：預計時間不能早於前一個預計區塊
+            if (prevMax) {
+                if (newMin < prevMax.minVal && (prevMax.minVal - newMin < 720)) {
+                    return {
+                        valid: false,
+                        msg: `防呆提醒：${targetLabel} (${newTimeStr}) 不能早於 ${prevMax.label} (${prevMax.val})！`
+                    };
+                }
+            }
+
+            // 檢查：預計時間不能晚於後一個預計區塊
+            if (nextMin) {
+                if (newMin > nextMin.minVal && (newMin - nextMin.minVal < 720)) {
+                    return {
+                        valid: false,
+                        msg: `防呆提醒：${targetLabel} (${newTimeStr}) 不能晚於 ${nextMin.label} (${nextMin.val})！`
+                    };
+                }
+            }
+
+            return { valid: true };
+        }
+
+        function handleTimeBlur(inputEl, roundIndex, fieldName, type) {
+            let val = inputEl.value.replace(/[^0-9]/g, '');
+            
+            if (val !== '') {
+                let num = parseInt(val, 10);
+                if (type === 'h' && num > 23) num = 23;
+                if (type === 'm' && num > 59) num = 59;
+                val = String(num).padStart(2, '0');
+                inputEl.value = val;
+            }
+
+            let currentVal = currentData.roundsData[roundIndex][fieldName] || '';
+            let [h, m] = currentVal.includes(':') ? currentVal.split(':') : ['', ''];
+
+            if (type === 'h') h = val;
+            if (type === 'm') m = val;
+
+            let newTimeStr = '';
+            if (h !== '' && m !== '') {
+                newTimeStr = `${h}:${m}`;
+            } else if (h === '' && m === '') {
+                newTimeStr = '';
+            } else {
+                newTimeStr = `${h}:${m}`;
+            }
+
+            // 防呆驗證機制：適用於所有預計時間 (p_announce -> p_start -> p_round_end)
+            if (newTimeStr !== '' && ['p_announce', 'p_start', 'p_round_end'].includes(fieldName)) {
+                const check = checkPlannedSequenceValidation(roundIndex, fieldName, newTimeStr);
+                if (!check.valid) {
+                    showToast(check.msg, 'error');
+                    const oldVal = currentData.roundsData[roundIndex][fieldName] || '';
+                    const oldParts = oldVal.split(':');
+                    inputEl.value = type === 'h' ? (oldParts[0] || '') : (oldParts[1] || '');
+                    return;
+                }
+            }
+
+            currentData.roundsData[roundIndex][fieldName] = newTimeStr;
+            saveCurrentData();
+            renderTable();
+        }
+
+        function parseToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            if (isNaN(h) || isNaN(m)) return null;
+            return h * 60 + m;
+        }
+
+        function minutesToTimeStr(totalMinutes) {
+            if (totalMinutes === null || isNaN(totalMinutes)) return '--';
+            let normMinutes = (totalMinutes % 1440 + 1440) % 1440;
+            const h = Math.floor(normMinutes / 60);
+            const m = normMinutes % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function formatDiffBadge(diffMinutes, isInvertedLogic = false) {
+            if (diffMinutes === null) {
+                return `<span class="text-slate-300 font-mono text-xs md:text-sm">--</span>`;
+            }
+
+            let text = `${diffMinutes > 0 ? '+' : ''}${diffMinutes} 分`;
+            let colorClass = 'bg-slate-100 text-slate-700 border-slate-300';
+
+            if (diffMinutes === 0) {
+                text = '準時';
+                colorClass = 'bg-slate-100 text-slate-600 border-slate-300';
+            } else if (!isInvertedLogic) {
+                if (diffMinutes > 0) {
+                    colorClass = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+                } else {
+                    colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold';
+                }
+            } else {
+                if (diffMinutes > 0) {
+                    colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold';
+                } else {
+                    colorClass = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+                }
+            }
+
+            return `<span class="inline-block px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-md md:rounded-lg border text-[11px] md:text-sm ${colorClass}">${text}</span>`;
+        }
+
+        function startTournament() {
+            const date = document.getElementById('inputDate').value;
+            const region = document.getElementById('inputRegion').value.trim();
+            const rounds = parseInt(document.getElementById('inputRounds').value, 10);
+            const duration = parseInt(document.getElementById('inputDuration').value, 10) || 25;
+            const category = document.getElementById('inputCategory').value.trim();
+
+            const gameCatEl = document.querySelector('input[name="gameCategory"]:checked');
+            const gameCategory = gameCatEl ? gameCatEl.value : 'pokemon';
+            let type = '';
+
+            if (gameCategory === 'pokemon') {
+                type = document.getElementById('inputTypePoke').value;
+            } else {
+                type = document.getElementById('inputTypeOther').value.trim();
+                if (!type) {
+                    showToast('請輸入賽事名稱！', 'error');
+                    return;
+                }
+            }
+
+            if (!region) {
+                showToast('請輸入賽事地區！', 'error');
+                return;
+            }
+            if (!type) {
+                showToast('請選擇或輸入賽事種類！', 'error');
+                return;
+            }
+
+            const tournamentId = 'tm_' + Date.now();
+            
+            currentData = {
+                id: tournamentId,
+                config: { date, region, type, rounds, category, roundDuration: duration },
+                roundsData: []
+            };
+
+            for (let i = 1; i <= rounds; i++) {
+                currentData.roundsData.push({
+                    roundNum: i, p_announce: '', a_announce: '', p_start: '', a_start: '', all_clear: '', p_round_end: ''
+                });
+            }
+
+            saveCurrentData();
+            switchToStep2();
+            showToast('已成功建立賽事時間表！');
+        }
+
+        function loadTournament(id) {
+            const allHistory = getAllHistory();
+            if (allHistory[id]) {
+                currentData = allHistory[id];
+                switchToStep2();
+                showToast(`已載入賽事：${currentData.config.region}`);
+            }
+        }
+
+        function saveCurrentData() {
+            if (!currentData.id) return;
+            const history = getAllHistory();
+            history[currentData.id] = currentData;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        }
+
+        function getAllHistory() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function switchToStep2() {
+            document.getElementById('step1Page').classList.add('hidden');
+            document.getElementById('step2Page').classList.remove('hidden');
+
+            const conf = currentData.config;
+            document.getElementById('displayDate').innerText = conf.date;
+            document.getElementById('displayRegion').innerText = conf.region;
+            document.getElementById('displayRounds').innerText = conf.rounds;
+            document.getElementById('badgeCategory').innerText = conf.category;
+            document.getElementById('badgeType').innerText = conf.type;
+
+            document.getElementById('thDurationDisplay').innerText = `(+${conf.roundDuration || 25}分)`;
+
+            const badgeType = document.getElementById('badgeType');
+            badgeType.className = 'inline-block align-middle text-center h-6 leading-[24px] px-3 rounded-full text-xs font-bold text-white ';
+            switch (conf.type) {
+                case '超級球': badgeType.classList.add('bg-blue-600'); break;
+                case '高級球': badgeType.classList.add('bg-amber-500'); break;
+                case '紀念球': badgeType.classList.add('bg-rose-600'); break;
+                case '大師球': badgeType.classList.add('bg-purple-600'); break;
+                default: badgeType.classList.add('bg-teal-600'); break;
+            }
+
+            renderTable();
+        }
+
+        function switchToStep1() {
+            const hasEnteredData = currentData.roundsData && currentData.roundsData.some(r => 
+                r.p_announce || r.a_announce || r.p_start || r.a_start || r.all_clear || r.p_round_end
+            );
+
+            if (hasEnteredData) {
+                if (!confirm('確定要返回賽事設定頁面嗎？（資料已自動儲存）')) {
+                    return;
+                }
+            }
+
+            document.getElementById('step1Page').classList.add('hidden');
+            document.getElementById('step1Page').classList.remove('hidden');
+            renderHistoryList();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('scheduleTbody');
+            tbody.innerHTML = '';
+            
+            const roundDuration = parseInt(currentData.config.roundDuration || 25, 10);
+
+            currentData.roundsData.forEach((row, idx) => {
+                const pAnnounceMin = parseToMinutes(row.p_announce);
+                const aAnnounceMin = parseToMinutes(row.a_announce);
+                const diffAnnounce = (aAnnounceMin !== null && pAnnounceMin !== null) ? (aAnnounceMin - pAnnounceMin) : null;
+
+                const pStartMin = parseToMinutes(row.p_start);
+                const aStartMin = parseToMinutes(row.a_start);
+                const diffStart = (aStartMin !== null && pStartMin !== null) ? (aStartMin - pStartMin) : null;
+
+                const gameOverMin = (aStartMin !== null) ? (aStartMin + roundDuration) : null;
+                const gameOverDisplay = (gameOverMin !== null) ? minutesToTimeStr(gameOverMin) : '--';
+
+                const allClearMin = parseToMinutes(row.all_clear);
+                
+                const pRoundEndMin = parseToMinutes(row.p_round_end);
+                const diffInRound = (allClearMin !== null && pRoundEndMin !== null) ? (allClearMin - pRoundEndMin) : null;
+
+                const diffTable = (pRoundEndMin !== null && allClearMin !== null) ? (pRoundEndMin - allClearMin) : null;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 border-b border-slate-200 text-center divide-x divide-slate-100';
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-1 font-black text-sm md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
+                        R${row.roundNum}
+                    </td>
+                    <!-- 區塊 1：配對區 -->
+                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
+                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
+                    <td class="py-2 px-1 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
+
+                    <!-- 區塊 2：開賽區 -->
+                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
+                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
+                    <td class="py-2 px-1 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
+
+                    <!-- 區塊 3：比賽與結束區 -->
+                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
+                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
+                    <td class="py-2 px-1 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
+
+                    <!-- 區塊 4：桌次區 -->
+                    <td class="py-2 px-1 bg-amber-50/20">
+                        <span class="font-mono font-bold text-xs md:text-lg text-slate-700 bg-amber-100/60 px-2 py-1 rounded-md md:rounded-lg border border-amber-200 inline-block min-w-[55px] md:min-w-[70px]">
+                            ${gameOverDisplay}
+                        </span>
+                    </td>
+                    <td class="py-2 px-1 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('historyList');
+            const history = getAllHistory();
+            const keys = Object.keys(history).sort().reverse();
+
+            if (keys.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs md:text-sm"><i class="fa-solid fa-folder-open text-2xl mb-1 block"></i>尚無本機歷史賽事紀錄</div>`;
+                return;
+            }
+
+            container.innerHTML = keys.map(key => {
+                const item = history[key];
+                const conf = item.config;
+                return `
+                    <div class="border border-slate-200 hover:border-indigo-300 rounded-xl p-3 bg-slate-50 hover:bg-indigo-50/30 transition-all flex justify-between items-start group shadow-sm">
+                        <div class="space-y-1 cursor-pointer flex-grow" onclick="loadTournament('${item.id}')">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white">${conf.type}</span>
+                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">${conf.category}</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-sm md:text-base group-hover:text-indigo-600 transition-colors">${conf.region} 賽事</h4>
+                            <p class="text-[11px] text-slate-500">日期：${conf.date} | 總輪次：R${conf.rounds} | 每輪：${conf.roundDuration || 25}分</p>
+                        </div>
+                        <button onclick="deleteHistory('${item.id}', event)" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors" title="刪除紀錄">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteHistory(id, e) {
+            e.stopPropagation();
+            if (confirm('確定要刪除這筆賽事紀錄嗎？')) {
+                const history = getAllHistory();
+                delete history[id];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                renderHistoryList();
+                showToast('已刪除紀錄');
+            }
+        }
+
+        function clearAllHistory() {
+            if (confirm('確定要清除本機「所有」賽事紀錄嗎？')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderHistoryList();
+                showToast('已清除所有歷史紀錄');
+            }
+        }
+
+        function exportJSON() {
+            if (!currentData || !currentData.roundsData) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `賽事時間紀錄_${currentData.config.region}_${currentData.config.date}.json`);
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+            showToast('已匯出 JSON 檔案');
+        }
+
+        function exportCSV() {
+            if (!currentData || !currentData.roundsData) return;
+            let csvContent = "\uFEFF";
+            const conf = currentData.config;
+            const roundDur = conf.roundDuration || 25;
+            csvContent += `賽事日期,${conf.date}\n地區,${conf.region}\n賽事種類,${conf.type}\n組別,${conf.category}\n總輪次,${conf.rounds}\n每輪時間(分),${roundDur}\n\n`;
+            csvContent += `輪次,預計公布配對,實際公布配對,配對時間差(分),預計開賽,實際開賽,開賽時間差(分),預計輪次結束,最後成績回報,輪內時間差(分),比賽時間到(+${roundDur}分),與桌次時間差(分)\n`;
+
+            currentData.roundsData.forEach(row => {
+                const pAnn = parseToMinutes(row.p_announce); const aAnn = parseToMinutes(row.a_announce);
+                const pStart = parseToMinutes(row.p_start); const aStart = parseToMinutes(row.a_start);
+                const ac = parseToMinutes(row.all_clear);
+                const pRe = parseToMinutes(row.p_round_end);
+                const go = (aStart !== null) ? (aStart + parseInt(roundDur)) : null;
+                const goStr = (go !== null) ? minutesToTimeStr(go) : '';
+
+                csvContent += `R${row.roundNum},${row.p_announce},${row.a_announce},${(aAnn!==null&&pAnn!==null)?(aAnn-pAnn):''},${row.p_start},${row.a_start},${(aStart!==null&&pStart!==null)?(aStart-pStart):''},${row.p_round_end},${row.all_clear},${(ac!==null&&pRe!==null)?(ac-pRe):''},${goStr},${(pRe!==null&&ac!==null)?(pRe-ac):''}\n`;
+            });
+
+            const link = document.createElement("a");
+            link.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent));
+            link.setAttribute("download", `賽事時間報表_${conf.region}_${conf.date}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast('已匯出 CSV 報表！');
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+            toastMsg.innerText = msg;
+            
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-base md:text-lg';
+            } else if (type === 'info') {
+                toastIcon.className = 'fa-solid fa-spinner fa-spin text-indigo-400 text-base md:text-lg';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base md:text-lg';
+            }
+
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'); }, 3000);
+        }
+
+        // --- AI Agent 邏輯 ---
+        function promptApiKey() {
+            const currentKey = localStorage.getItem(API_KEY_STORE) || '';
+            const newKey = prompt('設定 Gemini API Key (留空使用離線規則引擎):', currentKey);
+            if (newKey !== null) {
+                localStorage.setItem(API_KEY_STORE, newKey.trim());
+                showToast(newKey.trim() ? '已儲存 API Key' : '已切換為離線引擎');
+            }
+        }
+
+        async function runAIAgent() {
+            const box = document.getElementById('aiReportBox');
+            box.classList.remove('hidden');
+            box.innerHTML = `<div class="flex items-center gap-2 text-indigo-400 text-xs md:text-sm animate-pulse"><i class="fa-solid fa-spinner fa-spin"></i> AI 正在分析賽事時間落差...</div>`;
+            
+            const apiKey = localStorage.getItem(API_KEY_STORE);
+            if (!apiKey) {
+                setTimeout(() => box.innerHTML = generateOfflineReport(), 600);
+            } else {
+                try {
+                    const res = await callGemini(apiKey);
+                    box.innerHTML = `<div class="text-xs md:text-base whitespace-pre-wrap text-slate-300 leading-relaxed">${res}</div>`;
+                } catch (e) {
+                    box.innerHTML = `<div class="text-rose-400 mb-2 text-xs md:text-sm"><i class="fa-solid fa-triangle-exclamation"></i> API 連線失敗，已切換為離線分析。</div>` + generateOfflineReport();
+                }
+            }
+        }
+
+        function generateOfflineReport() {
+            let totalDelay = 0; let worstRound = -1; let maxDelay = -999;
+            currentData.roundsData.forEach(r => {
+                const p = parseToMinutes(r.p_start); const a = parseToMinutes(r.a_start);
+                if (p!==null && a!==null) {
+                    let d = a - p;
+                    if(d > 0) totalDelay += d;
+                    if(d > maxDelay) { maxDelay = d; worstRound = r.roundNum; }
+                }
+            });
+            let health = Math.max(30, 100 - (totalDelay * 2));
+            return `
+                <div class="grid grid-cols-3 gap-2 md:gap-4 mb-3">
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">賽事健康度</div>
+                        <div class="text-lg md:text-2xl font-black text-emerald-400 mt-0.5">${health} <span class="text-xs text-slate-500">/100</span></div>
+                    </div>
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">總開賽延遲</div>
+                        <div class="text-lg md:text-2xl font-black text-rose-400 mt-0.5">${totalDelay} <span class="text-xs text-slate-500">分</span></div>
+                    </div>
+                    <div class="bg-slate-700/50 p-2.5 md:p-4 rounded-xl border border-slate-600 text-center md:text-left">
+                        <div class="text-[10px] md:text-xs text-slate-400">最大延遲輪次</div>
+                        <div class="text-lg md:text-2xl font-black text-amber-400 mt-0.5">${worstRound !== -1 ? 'R'+worstRound : '無'} <span class="text-xs text-slate-500">(${maxDelay>0?'+'+maxDelay:'0'}分)</span></div>
+                    </div>
+                </div>
+                <h4 class="font-bold text-indigo-300 text-xs md:text-sm mb-1">💡 改善建議：</h4>
+                <p class="text-xs md:text-sm text-slate-300 leading-relaxed">${totalDelay > 10 ? '開賽延後累積較多，建議加強最後成績回報與桌次催局，並提早公佈配對。' : '目前賽事節奏控制優良，請繼續保持！'}</p>
+            `;
+        }
+
+        async function callGemini(apiKey) {
+            const promptData = JSON.stringify(currentData);
+            const prompt = "你是一位集換式卡牌大賽裁判長。請根據以下賽事時間JSON分析延誤瓶頸、雪球效應，並給出實務建議。用繁體中文回答，包含評分與具體改善點。\n\n" + promptData;
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+            });
+            if (!response.ok) throw new Error('API request failed');
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+    </script>
+</body>
+</html>
