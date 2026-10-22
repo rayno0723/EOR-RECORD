@@ -584,23 +584,82 @@
             const h = String(now.getHours()).padStart(2, '0');
             const m = String(now.getMinutes()).padStart(2, '0');
             
-            const isPlanField = ['p_announce', 'p_start', 'p_round_end'].includes(fieldName);
-            if (isPlanField && roundIndex > 0) {
-                const prevVal = currentData.roundsData[roundIndex - 1][fieldName];
-                if (prevVal !== '') {
-                    const newMin = now.getHours() * 60 + now.getMinutes();
-                    const prevMin = parseToMinutes(prevVal);
-                    if (prevMin !== null && newMin < prevMin && (prevMin - newMin < 720)) {
-                        showToast(`防呆提醒：R${roundIndex + 1} 時間不能早於 R${roundIndex}`, 'error');
-                        return;
-                    }
-                }
-            }
-
+            // 實際時間允許提早或依現場隨時紀錄，直接寫入
             currentData.roundsData[roundIndex][fieldName] = `${h}:${m}`;
             saveCurrentData();
             renderTable();
             showToast(`已填入現在時間 (${h}:${m})`);
+        }
+
+        // 核心防呆機制：針對所有預計時間（公布 -> 開賽 -> 結束）跨區塊、跨輪次進行嚴格順序檢查
+        function checkPlannedSequenceValidation(roundIndex, fieldName, newTimeStr) {
+            if (!newTimeStr || !['p_announce', 'p_start', 'p_round_end'].includes(fieldName)) {
+                return { valid: true };
+            }
+
+            const newMin = parseToMinutes(newTimeStr);
+            if (newMin === null) return { valid: true };
+
+            const planOrder = ['p_announce', 'p_start', 'p_round_end'];
+            const fieldLabels = {
+                'p_announce': '預計公布配對',
+                'p_start': '預計開賽',
+                'p_round_end': '預計輪次結束'
+            };
+
+            const targetSeqIndex = roundIndex * 3 + planOrder.indexOf(fieldName);
+            const targetLabel = `R${roundIndex + 1} ${fieldLabels[fieldName]}`;
+
+            let prevMax = null; // 在當前填寫項目之前的最後一個有值的預計時間
+            let nextMin = null; // 在當前填寫項目之後的第一個有值的預計時間
+
+            currentData.roundsData.forEach((row, rIdx) => {
+                planOrder.forEach((fName, fIdx) => {
+                    const seqIndex = rIdx * 3 + fIdx;
+                    if (seqIndex === targetSeqIndex) return;
+
+                    const val = row[fName];
+                    if (val && val.includes(':')) {
+                        const minVal = parseToMinutes(val);
+                        if (minVal !== null) {
+                            const label = `R${rIdx + 1} ${fieldLabels[fName]}`;
+                            const item = { seqIndex, minVal, val, label };
+
+                            if (seqIndex < targetSeqIndex) {
+                                if (!prevMax || seqIndex > prevMax.seqIndex) {
+                                    prevMax = item;
+                                }
+                            } else if (seqIndex > targetSeqIndex) {
+                                if (!nextMin || seqIndex < nextMin.seqIndex) {
+                                    nextMin = item;
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            // 檢查：預計時間不能早於前一個預計區塊
+            if (prevMax) {
+                if (newMin < prevMax.minVal && (prevMax.minVal - newMin < 720)) {
+                    return {
+                        valid: false,
+                        msg: `防呆提醒：${targetLabel} (${newTimeStr}) 不能早於 ${prevMax.label} (${prevMax.val})！`
+                    };
+                }
+            }
+
+            // 檢查：預計時間不能晚於後一個預計區塊
+            if (nextMin) {
+                if (newMin > nextMin.minVal && (newMin - nextMin.minVal < 720)) {
+                    return {
+                        valid: false,
+                        msg: `防呆提醒：${targetLabel} (${newTimeStr}) 不能晚於 ${nextMin.label} (${nextMin.val})！`
+                    };
+                }
+            }
+
+            return { valid: true };
         }
 
         function handleTimeBlur(inputEl, roundIndex, fieldName, type) {
@@ -629,23 +688,15 @@
                 newTimeStr = `${h}:${m}`;
             }
 
-            // 防呆驗證機制：檢查是否早於前一輪
-            if (newTimeStr !== '' && roundIndex > 0) {
-                const isPlanField = ['p_announce', 'p_start', 'p_round_end'].includes(fieldName);
-                if (isPlanField) {
-                    const prevVal = currentData.roundsData[roundIndex - 1][fieldName];
-                    if (prevVal !== '') {
-                        const newMin = parseToMinutes(newTimeStr);
-                        const prevMin = parseToMinutes(prevVal);
-                        
-                        if (newMin !== null && prevMin !== null && newMin < prevMin && (prevMin - newMin < 720)) {
-                            showToast(`防呆提醒：R${roundIndex + 1} 的時間不能早於 R${roundIndex}！`, 'error');
-                            const oldVal = currentData.roundsData[roundIndex][fieldName] || '';
-                            const oldParts = oldVal.split(':');
-                            inputEl.value = type === 'h' ? (oldParts[0] || '') : (oldParts[1] || '');
-                            return;
-                        }
-                    }
+            // 防呆驗證機制：適用於所有預計時間 (p_announce -> p_start -> p_round_end)
+            if (newTimeStr !== '' && ['p_announce', 'p_start', 'p_round_end'].includes(fieldName)) {
+                const check = checkPlannedSequenceValidation(roundIndex, fieldName, newTimeStr);
+                if (!check.valid) {
+                    showToast(check.msg, 'error');
+                    const oldVal = currentData.roundsData[roundIndex][fieldName] || '';
+                    const oldParts = oldVal.split(':');
+                    inputEl.value = type === 'h' ? (oldParts[0] || '') : (oldParts[1] || '');
+                    return;
                 }
             }
 
@@ -800,7 +851,7 @@
                 }
             }
 
-            document.getElementById('step2Page').classList.add('hidden');
+            document.getElementById('step1Page').classList.add('hidden');
             document.getElementById('step1Page').classList.remove('hidden');
             renderHistoryList();
         }
