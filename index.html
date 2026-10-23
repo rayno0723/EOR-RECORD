@@ -291,11 +291,11 @@
                 <!-- 時間表主要表格 (📱 手機橫向滾動+凍結第一欄) -->
                 <div class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto custom-scrollbar touch-pan-x touch-pan-y">
-                        <table class="w-full text-xs md:text-base text-left border-collapse min-w-[1100px] md:min-w-[1360px]">
+                        <table class="w-full text-xs md:text-base text-left border-collapse min-w-[730px] md:min-w-[960px]">
                             <thead class="text-xs md:text-sm font-bold uppercase bg-slate-900 text-white sticky top-0 z-30">
                                 <tr class="divide-x divide-slate-700 border-b border-slate-700 text-center">
-                                    <th scope="col" class="py-2.5 px-2 w-14 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
-                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
+                                    <th scope="col" class="py-1.5 px-2 w-14 md:w-20 bg-slate-900 sticky-col top-0 border-r border-slate-700">輪次</th>
+                                    <th scope="col" colspan="3" class="py-1.5 px-1 bg-blue-900/90 text-blue-100 border-b-2 border-blue-500">
                                         <div class="flex items-center justify-center gap-1.5">
                                             <span><i class="fa-solid fa-bullhorn mr-0.5"></i> 配對公布區</span>
                                             <button onclick="clearSectionData('announce')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-blue-950/60 hover:bg-rose-600 text-blue-200 hover:text-white px-1 py-0.5 rounded border border-blue-400/40 transition-colors">
@@ -303,7 +303,7 @@
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
+                                    <th scope="col" colspan="3" class="py-1.5 px-1 bg-emerald-900/90 text-emerald-100 border-b-2 border-emerald-500">
                                         <div class="flex items-center justify-center gap-1.5">
                                             <span><i class="fa-solid fa-flag-checkered mr-0.5"></i> 開賽時程區</span>
                                             <button onclick="clearSectionData('start')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-emerald-950/60 hover:bg-rose-600 text-emerald-200 hover:text-white px-1 py-0.5 rounded border border-emerald-400/40 transition-colors">
@@ -311,7 +311,7 @@
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="3" class="py-2.5 px-1 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
+                                    <th scope="col" colspan="3" class="py-1.5 px-1 bg-purple-900/90 text-purple-100 border-b-2 border-purple-500">
                                         <div class="flex items-center justify-center gap-1.5">
                                             <span><i class="fa-solid fa-clock mr-0.5"></i> 比賽與結束區</span>
                                             <button onclick="clearSectionData('end')" title="清除此區數據" data-html2canvas-ignore="true" class="text-[10px] bg-purple-950/60 hover:bg-rose-600 text-purple-200 hover:text-white px-1 py-0.5 rounded border border-purple-400/40 transition-colors">
@@ -319,28 +319,31 @@
                                             </button>
                                         </div>
                                     </th>
-                                    <th scope="col" colspan="2" class="py-2.5 px-1 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500 leading-tight">
-                                        <i class="fa-solid fa-hourglass-half mr-0.5"></i> 桌次時間區<br>
-                                        <span id="thDurationDisplay" class="text-[10px] text-amber-300 font-normal">(--分)</span>
+                                    <th scope="col" colspan="2" class="py-1.5 px-1 bg-amber-900/90 text-amber-100 border-b-2 border-amber-500">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <i class="fa-solid fa-hourglass-half text-xs"></i>
+                                            <span>桌次時間區</span>
+                                            <span id="thDurationDisplay" class="text-[10px] text-amber-300 font-normal">(--分)</span>
+                                        </div>
                                     </th>
                                 </tr>
-                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200 text-[11px] md:text-xs">
-                                    <th class="py-2 px-1 sticky-col bg-slate-800 border-r border-slate-700">輪別</th>
+                                <tr class="divide-x divide-slate-700 text-center bg-slate-800 text-slate-200 text-[12px] md:text-sm">
+                                    <th class="py-1 px-1 sticky-col bg-slate-800 border-r border-slate-700 w-10 md:w-14">輪別</th>
                                     
-                                    <th class="py-2 px-1 bg-blue-950/40 w-36 md:w-44">預計公布配對</th>
-                                    <th class="py-2 px-1 bg-blue-950/40 w-40 md:w-48">實際公布配對</th>
-                                    <th class="py-2 px-1 bg-blue-900/60 w-28 md:w-32 text-blue-200">時間差</th>
+                                    <th class="py-1 px-1 bg-blue-950/40 w-24 md:w-28">預計上配對</th>
+                                    <th class="py-1 px-1 bg-blue-950/40 w-20 md:w-28">實際上配對</th>
+                                    <th class="py-1 px-1 bg-blue-900/60 w-16 md:w-20 text-blue-200">時間差</th>
 
-                                    <th class="py-2 px-1 bg-emerald-950/40 w-36 md:w-44">預計開賽</th>
-                                    <th class="py-2 px-1 bg-emerald-950/40 w-40 md:w-48">實際開賽</th>
-                                    <th class="py-2 px-1 bg-emerald-900/60 w-28 md:w-32 text-emerald-200">時間差</th>
+                                    <th class="py-1 px-1 bg-emerald-950/40 w-24 md:w-28">預計開賽</th>
+                                    <th class="py-1 px-1 bg-emerald-950/40 w-20 md:w-28">實際開賽</th>
+                                    <th class="py-1 px-1 bg-emerald-900/60 w-16 md:w-20 text-emerald-200">時間差</th>
 
-                                    <th class="py-2 px-1 bg-purple-950/40 w-36 md:w-44">預計輪次結束</th>
-                                    <th class="py-2 px-1 bg-purple-950/40 w-40 md:w-48">最後成績回報</th>
-                                    <th class="py-2 px-1 bg-purple-900/60 w-28 md:w-32 text-purple-200">時間差</th>
+                                    <th class="py-1 px-1 bg-purple-950/40 w-24 md:w-28">預計結束</th>
+                                    <th class="py-1 px-1 bg-purple-950/40 w-20 md:w-28">最後回報</th>
+                                    <th class="py-1 px-1 bg-purple-900/60 w-16 md:w-20 text-purple-200">時間差</th>
 
-                                    <th class="py-2 px-1 bg-amber-950/40 w-32 md:w-44">比賽時間到</th>
-                                    <th class="py-2 px-1 bg-amber-900/60 w-32 md:w-36 text-amber-200">回報時間差</th>
+                                    <th class="py-1 px-1 bg-amber-950/40 w-18 md:w-24">比賽時間到</th>
+                                    <th class="py-1 px-1 bg-amber-900/60 w-16 md:w-20 text-amber-200">回報時間差</th>
                                 </tr>
                             </thead>
                             <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
@@ -767,24 +770,54 @@
                     const tables = clonedDoc.querySelectorAll('table');
                     tables.forEach(tbl => {
                         tbl.style.width = '100%';
-                        tbl.style.minWidth = '1360px';
+                        tbl.style.minWidth = '960px';
+                    });
+
+                    // 🛠️ 修正表頭兩排文字往下位移被切掉：取消 sticky、用固定行高讓文字絕對垂直置中
+                    clonedDoc.querySelectorAll('thead, thead th, tbody td.sticky-col').forEach(el => {
+                        el.style.position = 'static';
+                        el.style.top = 'auto';
+                        el.style.left = 'auto';
+                    });
+                    const headRows = clonedDoc.querySelectorAll('thead tr');
+                    headRows.forEach((tr, rowIdx) => {
+                        const rowH = rowIdx === 0 ? 46 : 42;
+                        tr.style.height = rowH + 'px';
+                        tr.querySelectorAll('th').forEach(th => {
+                            th.style.padding = '0 4px';
+                            th.style.height = rowH + 'px';
+                            th.style.lineHeight = rowH + 'px';
+                            th.style.verticalAlign = 'middle';
+                            th.style.textAlign = 'center';
+                            th.style.whiteSpace = 'nowrap';
+                            th.style.overflow = 'visible';
+                            th.querySelectorAll('div').forEach(d => {
+                                d.style.display = 'block';
+                                d.style.textAlign = 'center';
+                                d.style.lineHeight = rowH + 'px';
+                                d.style.height = rowH + 'px';
+                            });
+                            th.querySelectorAll('span, i').forEach(sp => {
+                                sp.style.display = 'inline';
+                                sp.style.lineHeight = rowH + 'px';
+                                sp.style.verticalAlign = 'middle';
+                            });
+                        });
                     });
 
                     // 🛠️ 終極解決方案：將所有表格儲存格（包括時間輸入、時間差標籤、桌次時間）統一改為絕對垂直置中、字體放大至 15px、去除多餘浮動框線，確保截圖 100% 絕不跑版！
                     const clonedCells = clonedDoc.querySelectorAll('td');
                     clonedCells.forEach(td => {
-                        td.style.padding = '8px 4px';
+                        td.style.padding = '4px 3px';
                         td.style.verticalAlign = 'middle';
                     });
 
                     const timeContainers = clonedDoc.querySelectorAll('td > div.flex');
                     timeContainers.forEach(container => {
-                        const inputs = container.querySelectorAll('input');
-                        if (inputs.length >= 2) {
-                            const h = inputs[0].value;
-                            const m = inputs[1].value;
-                            const hasValue = h !== '' || m !== '';
-                            
+                        const button = container.querySelector('button');
+                        if (button) {
+                            const rawText = button.textContent.trim();
+                            const isNow = rawText.includes('NOW');
                             const textSpan = clonedDoc.createElement('span');
                             textSpan.style.cssText = `
                                 display: flex !important;
@@ -793,13 +826,13 @@
                                 font-size: 17px !important;
                                 font-weight: bold !important;
                                 font-family: 'Courier New', Courier, monospace !important;
-                                color: ${hasValue ? '#0f172a' : '#94a3b8'} !important;
+                                color: ${(!isNow && rawText !== '-:-') ? '#0f172a' : '#cbd5e1'} !important;
                                 width: 100% !important;
                                 height: 100% !important;
-                                min-height: 36px !important;
+                                min-height: 28px !important;
                                 box-sizing: border-box !important;
                             `;
-                            textSpan.textContent = hasValue ? `${h || '00'}:${m || '00'}` : '--:--';
+                            textSpan.textContent = (!isNow && rawText !== '-:-') ? rawText : '--:--';
                             
                             if (container.parentNode) {
                                 container.parentNode.replaceChild(textSpan, container);
@@ -1040,17 +1073,66 @@
         }
 
         
+        
+        // ---------- ⚡ 實際時間極簡按鈕（單擊點擊：未填則自動帶入現在時間；已填則彈出修改視窗） ----------
+        function buildActualTimeButtonHTML(roundIndex, fieldName, value) {
+            const hasValue = value && value.trim() !== '';
+            const displayVal = hasValue ? value : 'NOW';
+            
+            if (hasValue) {
+                return `
+                    <div class="flex items-center justify-center">
+                        <button type="button" onclick="openPlannedTimeModal(${roundIndex}, '${fieldName}')"
+                                class="group font-mono font-bold text-xs md:text-base text-indigo-950 bg-indigo-50/90 hover:bg-indigo-100 border-indigo-300 border px-2 py-1 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95">
+                            <span>${displayVal}</span>
+                            <i class="fa-solid fa-pen text-[10px] text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" data-html2canvas-ignore="true"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="flex items-center justify-center">
+                        <button type="button" onclick="quickFillActualTime(${roundIndex}, '${fieldName}')"
+                                title="點擊直接紀錄現在時間 (已紀錄後點擊可修改)"
+                                class="font-mono font-bold text-xs md:text-sm text-indigo-600 bg-white hover:bg-indigo-600 hover:text-white border border-dashed border-indigo-400 hover:border-indigo-600 px-2 py-1 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95">
+                            <i class="fa-solid fa-bolt text-amber-500 text-[10px] md:text-xs"></i>
+                            <span>NOW</span>
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function quickFillActualTime(roundIndex, fieldName) {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const timeStr = `${h}:${m}`;
+
+            currentData.roundsData[roundIndex][fieldName] = timeStr;
+            saveCurrentData();
+            renderTable();
+
+            const fieldLabels = {
+                'a_announce': '實際公布配對',
+                'a_start': '實際開賽',
+                'all_clear': '最後成績回報'
+            };
+            const labelName = fieldLabels[fieldName] || '實際時間';
+            showToast(`已紀錄 R${roundIndex + 1} ${labelName} (${timeStr})`);
+        }
+
         // ---------- 預計時間簡化按鈕（純文字顯示，點擊才彈出修改視窗） ----------
         function buildPlannedTimeButtonHTML(roundIndex, fieldName, value) {
             const hasValue = value && value.trim() !== '';
-            const displayVal = hasValue ? value : '--:--';
+            const displayVal = hasValue ? value : '-:-';
             
             return `
                 <div class="flex items-center justify-center">
-                    <button type="button" onclick="openPlannedTimeModal(${roundIndex}, '${fieldName}')" data-html2canvas-ignore="false"
-                            class="group font-mono font-bold text-sm md:text-base ${hasValue ? 'text-slate-800 bg-slate-100/90 hover:bg-indigo-50 border-slate-300 hover:border-indigo-400' : 'text-slate-400 bg-slate-50 border-dashed border-slate-300 hover:bg-slate-100'} border px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
-                        <span>${displayVal}</span>
-                        <i class="fa-solid fa-pen text-[10px] ${hasValue ? 'text-indigo-500 opacity-60 group-hover:opacity-100' : 'text-slate-400'} transition-opacity" data-html2canvas-ignore="true"></i>
+                    <button type="button" onclick="openPlannedTimeModal(${roundIndex}, '${fieldName}')"
+                            class="group font-mono font-bold text-xs md:text-base whitespace-nowrap ${hasValue ? 'text-slate-800 bg-slate-100/90 hover:bg-indigo-50 border-slate-300 hover:border-indigo-400' : 'text-slate-400 bg-slate-50 border-dashed border-slate-300 hover:bg-slate-100'} border px-1.5 py-1 md:px-2.5 md:py-1 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1 active:scale-95">
+                        <span class="whitespace-nowrap">${displayVal}</span>
+                        <i class="fa-solid fa-pen text-[9px] md:text-[10px] ${hasValue ? 'text-indigo-500 opacity-60 group-hover:opacity-100' : 'text-slate-400'} transition-opacity" data-html2canvas-ignore="true"></i>
                     </button>
                 </div>
             `;
@@ -1415,31 +1497,31 @@
                 tr.className = 'hover:bg-slate-50 border-b border-slate-200 text-center divide-x divide-slate-100';
 
                 tr.innerHTML = `
-                    <td class="py-2.5 px-1 font-black text-sm md:text-lg bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
+                    <td class="py-1 px-1 font-black text-sm md:text-base bg-slate-100 text-indigo-900 sticky-col border-r border-slate-200 shadow-sm">
                         R${row.roundNum}
                     </td>
                     <!-- 區塊 1：配對區 -->
-                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_announce', row.p_announce)}</td>
-                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
-                    <td class="py-2 px-1 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
+                    <td class="py-1 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_announce', row.p_announce)}</td>
+                    <td class="py-1 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildActualTimeButtonHTML(idx, 'a_announce', row.a_announce)}</td>
+                    <td class="py-1 px-1 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
                     <!-- 區塊 2：開賽區 -->
-                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_start', row.p_start)}</td>
-                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
-                    <td class="py-2 px-1 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
+                    <td class="py-1 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_start', row.p_start)}</td>
+                    <td class="py-1 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildActualTimeButtonHTML(idx, 'a_start', row.a_start)}</td>
+                    <td class="py-1 px-1 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
                     <!-- 區塊 3：比賽與結束區 -->
-                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_round_end', row.p_round_end)}</td>
-                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
-                    <td class="py-2 px-1 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
+                    <td class="py-1 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_round_end', row.p_round_end)}</td>
+                    <td class="py-1 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildActualTimeButtonHTML(idx, 'all_clear', row.all_clear)}</td>
+                    <td class="py-1 px-1 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
                     <!-- 區塊 4：桌次區 -->
-                    <td class="py-2 px-1 bg-amber-50/20">
+                    <td class="py-1 px-1 bg-amber-50/20">
                         <span class="font-mono font-bold text-xs md:text-lg text-slate-700 bg-amber-100/60 px-2 py-1 rounded-md md:rounded-lg border border-amber-200 inline-block min-w-[55px] md:min-w-[70px]">
                             ${gameOverDisplay}
                         </span>
                     </td>
-                    <td class="py-2 px-1 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
+                    <td class="py-1 px-1 bg-amber-50/50">${formatDiffBadge(diffTable, true)}</td>
                 `;
 
                 tbody.appendChild(tr);
@@ -1657,16 +1739,16 @@
                         <p class="text-[11px] text-slate-400 mt-0.5">例如：開賽前 5 分鐘公布配對</p>
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">3. 比賽時間到到最後成績回報間隔 (分鐘)</label>
+                        <label class="block font-bold text-slate-700 mb-1">3. 比賽結束到最後成績回報間隔 (分鐘)</label>
                         <input type="number" id="autoGapEndToClear" min="0" max="60" value="5"
                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
                         <p class="text-[11px] text-slate-400 mt-0.5">例如：比賽結束後 5 分鐘內收齊成績</p>
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">4. 成績回報到下一輪配對公布間隔 (分鐘)</label>
+                        <label class="block font-bold text-slate-700 mb-1">4. 成績回報完到下一輪配對公布間隔 (分鐘)</label>
                         <input type="number" id="autoGapClearToNext" min="0" max="60" value="5"
                                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <p class="text-[11px] text-slate-400 mt-0.5">例如：上一輪成績回報後，隔 5 分鐘公布下一輪配對</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">例如：上一輪成績回報完，隔 5 分鐘公布下一輪配對</p>
                     </div>
                 </div>
             </div>
@@ -1752,7 +1834,12 @@
             </div>
             <div class="p-4 space-y-4 text-slate-700">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1.5">時間 (24小時制 HH:MM)</label>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-bold text-slate-500">時間 (24小時制 HH:MM)</label>
+                        <button type="button" onclick="fillModalNowTime()" class="text-xs bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 px-2 py-1 rounded-lg font-bold transition-colors flex items-center gap-1 shadow-sm active:scale-95">
+                            <i class="fa-solid fa-bolt text-amber-500"></i> 帶入現在時間
+                        </button>
+                    </div>
                     <div class="flex items-center gap-2">
                         <input type="text" id="plannedModalH" placeholder="時" maxlength="2" inputmode="numeric" pattern="[0-9]*"
                                class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2 text-center text-lg font-bold font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -1797,7 +1884,10 @@
             const fieldLabels = {
                 'p_announce': '預計公布配對',
                 'p_start': '預計開賽',
-                'p_round_end': '預計輪次結束'
+                'p_round_end': '預計輪次結束',
+                'a_announce': '實際公布配對',
+                'a_start': '實際開賽',
+                'all_clear': '最後成績回報'
             };
             const labelName = fieldLabels[fieldName] || '預計時間';
             document.getElementById('plannedTimeModalTitle').innerHTML = `<i class="fa-solid fa-clock-pen text-indigo-400"></i> 修改 R${roundIndex + 1} ${labelName}`;
@@ -1808,6 +1898,12 @@
             document.getElementById('plannedModalM').value = m;
 
             document.getElementById('plannedTimeModal').classList.remove('hidden');
+        }
+
+        function fillModalNowTime() {
+            const now = new Date();
+            document.getElementById('plannedModalH').value = String(now.getHours()).padStart(2, '0');
+            document.getElementById('plannedModalM').value = String(now.getMinutes()).padStart(2, '0');
         }
 
         function closePlannedTimeModal() {
