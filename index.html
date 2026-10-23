@@ -274,10 +274,10 @@
                             <i class="fa-solid fa-file-import"></i> 匯入
                         </button>
                         <button onclick="exportJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1 border border-slate-300 active:scale-95">
-                            <i class="fa-solid fa-file-code"></i> JSON
+                            <i class="fa-solid fa-file-export"></i> 匯出 JSON
                         </button>
                         <button onclick="exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1 shadow-sm active:scale-95">
-                            <i class="fa-solid fa-file-csv"></i> CSV
+                            <i class="fa-solid fa-file-csv"></i> 匯出 CSV
                         </button>
                     </div>
                 </div>
@@ -546,10 +546,12 @@
                 roundDuration: 25
             },
             autoSettings: {
+                r1TimeType: "announce",
+                r1TimeValue: "10:00",
                 r1AnnounceTime: "10:00",
-                gapAnnounceToStart: 10,
+                gapAnnounceToStart: 5,
                 gapEndToClear: 5,
-                gapClearToNextAnnounce: 10
+                gapClearToNextAnnounce: 5
             },
             roundsData: []
         };
@@ -1777,13 +1779,18 @@
                     </div>
                 </div>
             </div>
-            <div class="p-3 md:p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2.5 shrink-0">
-                <button onclick="closeAutoSettingsModal()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
-                    取消
+            <div class="p-3 md:p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center gap-2.5 shrink-0">
+                <button onclick="resetAutoSettingsToDefault()" class="px-3 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-slate-300">
+                    <i class="fa-solid fa-rotate-left"></i> 恢復預設 (5分)
                 </button>
-                <button onclick="saveAndApplyAutoSchedule()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
-                    <i class="fa-solid fa-check"></i> 套用預計排程
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeAutoSettingsModal()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                        取消
+                    </button>
+                    <button onclick="saveAndApplyAutoSchedule()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-check"></i> 套用預計排程
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1805,9 +1812,16 @@
             }
         }
 
+        function resetAutoSettingsToDefault() {
+            document.getElementById('autoGapAnnounce').value = 5;
+            document.getElementById('autoGapEndToClear').value = 5;
+            document.getElementById('autoGapClearToNext').value = 5;
+            showToast('已恢復預設間隔 (5分鐘)');
+        }
+
         function openAutoSettingsModal() {
             if (!currentData.autoSettings) {
-                currentData.autoSettings = { r1TimeType: "announce", r1TimeValue: "10:00", gapAnnounceToStart: 10, gapEndToClear: 5, gapClearToNextAnnounce: 10 };
+                currentData.autoSettings = { r1TimeType: "announce", r1TimeValue: "10:00", gapAnnounceToStart: 5, gapEndToClear: 5, gapClearToNextAnnounce: 5 };
             }
             const s = currentData.autoSettings;
             document.getElementById('autoRoundDuration').value = currentData.config.roundDuration || 25;
@@ -1820,9 +1834,9 @@
             document.getElementById('autoR1TimeInput').value = timeVal;
             onAutoR1TimeTypeChange();
 
-            document.getElementById('autoGapAnnounce').value = s.gapAnnounceToStart !== undefined ? s.gapAnnounceToStart : 10;
+            document.getElementById('autoGapAnnounce').value = s.gapAnnounceToStart !== undefined ? s.gapAnnounceToStart : 5;
             document.getElementById('autoGapEndToClear').value = s.gapEndToClear !== undefined ? s.gapEndToClear : 5;
-            document.getElementById('autoGapClearToNext').value = s.gapClearToNextAnnounce !== undefined ? s.gapClearToNextAnnounce : 10;
+            document.getElementById('autoGapClearToNext').value = s.gapClearToNextAnnounce !== undefined ? s.gapClearToNextAnnounce : 5;
             
             document.getElementById('autoSettingsModal').classList.remove('hidden');
         }
