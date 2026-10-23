@@ -92,6 +92,8 @@
             }
         }
     </style>
+    <!-- 📈 引入 Chart.js 繪圖函式庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col text-base">
 
@@ -168,13 +170,19 @@
                                     </label>
                                 </div>
                             </div>
-                            <select id="inputTypePoke" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                            <select id="inputTypePoke" onchange="updateSubCodeVisibility()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
                                 <option value="超級球">超級球 (Great Ball)</option>
                                 <option value="高級球">高級球 (Ultra Ball)</option>
                                 <option value="紀念球">紀念球 (Premier Ball)</option>
                                 <option value="大師球">大師球 (Master Ball)</option>
                             </select>
                             <input type="text" id="inputTypeOther" placeholder="輸入賽事名稱 (例：航海王旗艦賽)" class="hidden w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-base focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+
+                            <!-- 🌟 超級球 (賽季) / 高級球 (場次 幾-幾) 選填欄位 -->
+                            <div id="subCodeContainer" class="mt-2.5">
+                                <label id="subCodeLabel" class="block text-xs font-bold text-slate-600 mb-1">賽季 (選填)</label>
+                                <input type="text" id="inputSubCode" placeholder="例：賽季1 或 S1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-sm">
+                            </div>
                         </div>
 
                         <!-- 4. 組別 -->
@@ -233,6 +241,7 @@
                     <div class="space-y-1 w-full lg:w-auto">
                         <div class="flex flex-wrap items-center gap-1.5">
                             <span id="badgeType" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold text-white bg-slate-700">--</span>
+                            <span id="badgeSubCode" onclick="openEditConfigModal()" title="點擊修改/補填賽季與場次資訊" class="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 gap-1 cursor-pointer hover:bg-amber-200 transition-colors shadow-sm active:scale-95">--</span>
                             <span id="badgeCategory" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">--</span>
                             <span id="badgeRegion" class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 gap-1">
                                 <i class="fa-solid fa-location-dot text-[10px]"></i> <span id="displayRegion">--</span>
@@ -240,6 +249,9 @@
                             <span id="badgeDate" class="inline-flex items-center justify-center text-xs text-slate-500 ml-1 gap-1">
                                 <i class="fa-regular fa-calendar text-[10px]"></i> <span id="displayDate">--</span>
                             </span>
+                            <button onclick="openEditConfigModal()" class="text-xs text-slate-500 hover:text-indigo-600 px-2 py-0.5 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1 font-medium border border-transparent hover:border-slate-300" data-html2canvas-ignore="true" title="修改賽事基本資訊">
+                                <i class="fa-solid fa-pen-to-square text-indigo-500"></i> 修改資訊
+                            </button>
                         </div>
                         <h2 class="text-lg md:text-2xl font-bold text-slate-900 flex items-center gap-2 flex-wrap mt-1">
                             賽事時間效率明細表
@@ -253,6 +265,11 @@
                             <i class="fa-solid fa-arrow-left"></i> 返回設定
                         </button>
                         
+                        <!-- ⚙️ 預計排程按鈕 -->
+                        <button onclick="openAutoSettingsModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-calendar-days"></i> 預計排程
+                        </button>
+
                         <!-- 📷 匯出 PNG 圖片按鈕 -->
                         <button onclick="exportImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl text-xs md:text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-camera"></i> 匯出圖片
@@ -312,24 +329,90 @@
                                     
                                     <th class="py-2 px-1 bg-blue-950/40 w-36 md:w-44">預計公布配對</th>
                                     <th class="py-2 px-1 bg-blue-950/40 w-40 md:w-48">實際公布配對</th>
-                                    <th class="py-2 px-1 bg-blue-900/60 w-28 md:w-32 text-blue-200">配對時間差</th>
+                                    <th class="py-2 px-1 bg-blue-900/60 w-28 md:w-32 text-blue-200">時間差</th>
 
                                     <th class="py-2 px-1 bg-emerald-950/40 w-36 md:w-44">預計開賽</th>
                                     <th class="py-2 px-1 bg-emerald-950/40 w-40 md:w-48">實際開賽</th>
-                                    <th class="py-2 px-1 bg-emerald-900/60 w-28 md:w-32 text-emerald-200">開賽時間差</th>
+                                    <th class="py-2 px-1 bg-emerald-900/60 w-28 md:w-32 text-emerald-200">時間差</th>
 
                                     <th class="py-2 px-1 bg-purple-950/40 w-36 md:w-44">預計輪次結束</th>
                                     <th class="py-2 px-1 bg-purple-950/40 w-40 md:w-48">最後成績回報</th>
-                                    <th class="py-2 px-1 bg-purple-900/60 w-28 md:w-32 text-purple-200">輪內時間差</th>
+                                    <th class="py-2 px-1 bg-purple-900/60 w-28 md:w-32 text-purple-200">時間差</th>
 
                                     <th class="py-2 px-1 bg-amber-950/40 w-32 md:w-44">比賽時間到</th>
-                                    <th class="py-2 px-1 bg-amber-900/60 w-32 md:w-36 text-amber-200">與桌次時間差</th>
+                                    <th class="py-2 px-1 bg-amber-900/60 w-32 md:w-36 text-amber-200">回報時間差</th>
                                 </tr>
                             </thead>
                             <tbody id="scheduleTbody" class="divide-y divide-slate-200 bg-white">
                                 <!-- 動態生成輪次列 -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- 📈 數據時間軸與進度效率圖表區塊 -->
+                <div id="chartContainerCard" class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden transition-all duration-300">
+                    <!-- 卡片標頭 -->
+                    <div class="p-3.5 md:p-5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="bg-indigo-600/80 text-white p-2 rounded-xl shrink-0">
+                                <i class="fa-solid fa-chart-line text-lg md:text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-sm md:text-base flex items-center gap-2">
+                                    賽事時間軸與進度效率圖表
+                                </h3>
+                                <p class="text-[11px] md:text-xs text-slate-400">實時可視化各輪預計 vs 實際時程與開賽延誤趨勢</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs" data-html2canvas-ignore="true">
+                            <button type="button" onclick="openChartModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-bold">
+                                <i class="fa-solid fa-expand text-indigo-400"></i> 獨立彈窗
+                            </button>
+                            <button type="button" onclick="toggleChartSection()" id="btnToggleChart" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 font-bold">
+                                <i class="fa-solid fa-chevron-up transition-transform duration-200 rotate-180" id="iconToggleChart"></i>
+                                <span id="textToggleChart">展開圖表</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 內容主體 -->
+                    <div id="chartBodyContent" class="p-3.5 md:p-6 space-y-4 hidden">
+                        <!-- KPI 快速進度與效率指標列 -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 md:gap-4">
+                            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl shadow-sm">
+                                <div class="text-[11px] md:text-xs font-bold text-slate-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-bars-progress text-indigo-500"></i> 賽事總進度
+                                </div>
+                                <div class="text-base md:text-xl font-black text-slate-800 mt-1 flex items-baseline gap-1">
+                                    <span id="kpiProgress">0 / 0</span>
+                                    <span id="kpiProgressPct" class="text-xs font-normal text-slate-500">(0%)</span>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl shadow-sm">
+                                <div class="text-[11px] md:text-xs font-bold text-slate-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-clock-rotate-left text-rose-500"></i> 累積開賽延遲
+                                </div>
+                                <div id="kpiStartDelay" class="text-base md:text-xl font-black text-slate-800 mt-1">--</div>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl shadow-sm">
+                                <div class="text-[11px] md:text-xs font-bold text-slate-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-stopwatch-20 text-amber-500"></i> 平均單輪開賽落差
+                                </div>
+                                <div id="kpiAvgDelay" class="text-base md:text-xl font-black text-slate-800 mt-1">--</div>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl shadow-sm">
+                                <div class="text-[11px] md:text-xs font-bold text-slate-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-gauge-high text-emerald-500"></i> 整體控場效率
+                                </div>
+                                <div id="kpiEfficiencyBadge" class="text-xs md:text-sm font-bold mt-1">--</div>
+                            </div>
+                        </div>
+
+                        <!-- 圖表 Canvas -->
+                        <div class="relative w-full h-[260px] md:h-[340px] bg-slate-50/50 rounded-xl p-2 md:p-3 border border-slate-200">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -392,6 +475,54 @@
     </div>
 
 
+    <!-- ✏️ 修改賽事資訊彈窗 (第二頁左上點擊) -->
+    <div id="editConfigModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6" data-html2canvas-ignore="true">
+        <div class="bg-white rounded-2xl max-w-md w-full flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-sm md:text-base flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-indigo-400"></i> 修改賽事基本資訊
+                </h3>
+                <button onclick="closeEditConfigModal()" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 md:p-6 space-y-4 text-slate-700 text-xs md:text-sm">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">賽事種類 / 球種</label>
+                    <select id="editTypeSelect" onchange="onEditTypeChange()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="超級球">超級球 (Great Ball)</option>
+                        <option value="高級球">高級球 (Ultra Ball)</option>
+                        <option value="紀念球">紀念球 (Premier Ball)</option>
+                        <option value="大師球">大師球 (Master Ball)</option>
+                        <option value="other">其他賽事 (自訂名稱)</option>
+                    </select>
+                    <input type="text" id="editTypeCustomInput" placeholder="輸入自訂賽事名稱" class="hidden mt-2 w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label id="editSubCodeTitle" class="block font-bold text-slate-700 mb-1">賽季 / 場次 (選填)</label>
+                    <input type="text" id="editSubCodeInput" placeholder="例：賽季1 或 1-1" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <p id="editSubCodeHint" class="text-[11px] text-slate-400 mt-1">高級球填寫如「1-1、2-1」，超級球填寫如「賽季1」</p>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">地區 / 場館</label>
+                    <input type="text" id="editRegionInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">組別</label>
+                    <input type="text" id="editCategoryInput" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div class="p-3 md:p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2.5 shrink-0">
+                <button onclick="closeEditConfigModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                    取消
+                </button>
+                <button onclick="saveEditConfigModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-check"></i> 儲存變更
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 訊息提示 Toast -->
     <div id="toast" class="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md bg-slate-900 text-white text-xs md:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none z-50 flex items-center gap-2 justify-center sm:justify-start">
         <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base md:text-lg"></i>
@@ -412,8 +543,110 @@
                 category: '大師組',
                 roundDuration: 25
             },
+            autoSettings: {
+                r1StartTime: "10:00",
+                gapAnnounceToStart: 10,
+                gapEndToClear: 5,
+                gapClearToNextAnnounce: 10
+            },
             roundsData: []
         };
+
+        
+        function onEditTypeChange() {
+            const typeSel = document.getElementById('editTypeSelect').value;
+            const customInp = document.getElementById('editTypeCustomInput');
+            const modalTitle = document.getElementById('editSubCodeTitle');
+            const modalHint = document.getElementById('editSubCodeHint');
+            const inputSubCode = document.getElementById('editSubCodeInput');
+
+            let currentType = typeSel;
+            if (typeSel === 'other') {
+                customInp.classList.remove('hidden');
+                customInp.style.display = '';
+                currentType = customInp.value.trim() || '其他賽事';
+            } else {
+                customInp.classList.add('hidden');
+                customInp.style.display = 'none';
+            }
+
+            if (currentType === '超級球') {
+                modalTitle.innerText = '賽季名稱 (選填)';
+                inputSubCode.placeholder = '例：賽季1 或 S1';
+                modalHint.innerText = '超級球可填寫當前的賽季代號，例如「賽季1」、「S2」';
+            } else if (currentType === '高級球') {
+                modalTitle.innerText = '場次代碼 (選填)';
+                inputSubCode.placeholder = '例：1-1 或 2-1';
+                modalHint.innerText = '高級球可填寫當前場次，例如「1-1」、「2-1」';
+            } else {
+                modalTitle.innerText = '賽事代碼 / 備註 (選填)';
+                inputSubCode.placeholder = '例：Phase 1';
+                modalHint.innerText = '可填寫自訂賽事階段或識別碼';
+            }
+        }
+
+        function openEditConfigModal() {
+            if (!currentData || !currentData.config) return;
+            const conf = currentData.config;
+
+            const typeSel = document.getElementById('editTypeSelect');
+            const customInp = document.getElementById('editTypeCustomInput');
+            const standardTypes = ['超級球', '高級球', '紀念球', '大師球'];
+
+            if (standardTypes.includes(conf.type)) {
+                typeSel.value = conf.type;
+                customInp.value = '';
+                customInp.classList.add('hidden');
+                customInp.style.display = 'none';
+            } else {
+                typeSel.value = 'other';
+                customInp.value = conf.type || '';
+                customInp.classList.remove('hidden');
+                customInp.style.display = '';
+            }
+
+            onEditTypeChange();
+
+            document.getElementById('editSubCodeInput').value = conf.subCode || '';
+            document.getElementById('editRegionInput').value = conf.region || '';
+            document.getElementById('editCategoryInput').value = conf.category || '';
+
+            document.getElementById('editConfigModal').classList.remove('hidden');
+        }
+
+        function closeEditConfigModal() {
+            document.getElementById('editConfigModal').classList.add('hidden');
+        }
+
+        function saveEditConfigModal() {
+            if (!currentData || !currentData.config) return;
+
+            const typeSel = document.getElementById('editTypeSelect').value;
+            const customInp = document.getElementById('editTypeCustomInput').value.trim();
+            
+            let newType = typeSel;
+            if (typeSel === 'other') {
+                if (!customInp) {
+                    showToast('請輸入自訂賽事名稱！', 'error');
+                    return;
+                }
+                newType = customInp;
+            }
+
+            const newSubCode = document.getElementById('editSubCodeInput').value.trim();
+            const newRegion = document.getElementById('editRegionInput').value.trim();
+            const newCategory = document.getElementById('editCategoryInput').value.trim();
+
+            if (newRegion) currentData.config.region = newRegion;
+            if (newCategory) currentData.config.category = newCategory;
+            currentData.config.type = newType;
+            currentData.config.subCode = newSubCode;
+
+            saveCurrentData();
+            switchToStep2();
+            closeEditConfigModal();
+            showToast('已更新賽事基本資訊！');
+        }
 
         window.onload = function() {
             document.getElementById('inputDate').value = currentData.config.date;
@@ -443,6 +676,33 @@
                 inputOther.style.display = '';
                 inputOther.required = true;
                 inputOther.focus();
+            }
+            updateSubCodeVisibility();
+        }
+
+        function updateSubCodeVisibility() {
+            const catEl = document.querySelector('input[name="gameCategory"]:checked');
+            const cat = catEl ? catEl.value : 'pokemon';
+            const pokeType = document.getElementById('inputTypePoke').value;
+            const subCodeBox = document.getElementById('subCodeContainer');
+            const subCodeLabel = document.getElementById('subCodeLabel');
+            const subCodeInput = document.getElementById('inputSubCode');
+
+            if (!subCodeBox) return;
+
+            if (cat === 'pokemon' && (pokeType === '超級球' || pokeType === '高級球')) {
+                subCodeBox.classList.remove('hidden');
+                subCodeBox.style.display = '';
+                if (pokeType === '超級球') {
+                    subCodeLabel.innerText = '賽季 (選填)';
+                    subCodeInput.placeholder = '例：賽季1 或 S1';
+                } else if (pokeType === '高級球') {
+                    subCodeLabel.innerText = '場次 / 代碼 (選填)';
+                    subCodeInput.placeholder = '例：1-1 或 2-1';
+                }
+            } else {
+                subCodeBox.classList.add('hidden');
+                subCodeBox.style.display = 'none';
             }
         }
 
@@ -569,6 +829,8 @@
                     const topInfoContainer = clonedDoc.querySelector('#captureArea .bg-white.rounded-2xl.shadow-md');
                     if (topInfoContainer) {
                         const typeText = clonedDoc.getElementById('badgeType') ? clonedDoc.getElementById('badgeType').innerText : '';
+                        const rawSubCode = clonedDoc.getElementById('badgeSubCode') ? clonedDoc.getElementById('badgeSubCode').innerText : '';
+                        const subCodeText = (rawSubCode && !rawSubCode.includes('補填')) ? rawSubCode : '';
                         const catText = clonedDoc.getElementById('badgeCategory') ? clonedDoc.getElementById('badgeCategory').innerText : '';
                         const regionText = clonedDoc.getElementById('displayRegion') ? clonedDoc.getElementById('displayRegion').innerText : '';
                         const dateText = clonedDoc.getElementById('displayDate') ? clonedDoc.getElementById('displayDate').innerText : '';
@@ -590,6 +852,7 @@
                             <div style="width: 100%;">
                                 <div style="font-size: 15px; font-weight: bold; color: #475569; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
                                     <span>📌 賽事資訊：<span style="color: #1e293b; font-weight: bold;">${typeText}</span></span>
+                                    ${subCodeText ? `<span>🏷️ 賽季/場次：<span style="color: #1e293b; font-weight: bold;">${subCodeText}</span></span>` : ''}
                                     <span>📅 日期：<span style="color: #1e293b; font-weight: bold;">${dateText}</span></span>
                                     <span>組別：<span style="color: #1e293b; font-weight: bold;">${catText}</span></span>
                                     <span>地區：<span style="color: #1e293b; font-weight: bold;">${regionText}</span></span>
@@ -601,6 +864,21 @@
                         `;
 
                         topInfoContainer.parentNode.replaceChild(cleanHeader, topInfoContainer);
+                    }
+                    // 💡 將圖表區塊的「整體控場效率」等 KPI 標籤在截圖時轉換為純文字，避免 html2canvas 圓角與背景框位移跑偏
+                    const clonedKpiBadge = clonedDoc.getElementById('kpiEfficiencyBadge');
+                    if (clonedKpiBadge) {
+                        const badgeSpan = clonedKpiBadge.querySelector('span');
+                        if (badgeSpan) {
+                            const rawText = badgeSpan.textContent || badgeSpan.innerText;
+                            let textColor = '#334155';
+                            if (badgeSpan.classList.contains('text-rose-700') || rawText.includes('嚴重延誤')) textColor = '#be123c';
+                            else if (badgeSpan.classList.contains('text-amber-700') || rawText.includes('輕微延遲')) textColor = '#b45309';
+                            else if (badgeSpan.classList.contains('text-blue-700') || rawText.includes('良好')) textColor = '#1d4ed8';
+                            else if (badgeSpan.classList.contains('text-emerald-700') || rawText.includes('極佳')) textColor = '#047857';
+
+                            clonedKpiBadge.innerHTML = `<span style="font-size: 15px !important; font-weight: bold !important; color: ${textColor} !important; background: transparent !important; border: none !important; padding: 0 !important; margin: 0 !important; display: inline-block !important; border-radius: 0 !important; box-shadow: none !important;">${rawText}</span>`;
+                        }
                     }
                 }
             }).then(canvas => {
@@ -759,6 +1037,23 @@
                 };
             }
             return null;
+        }
+
+        
+        // ---------- 預計時間簡化按鈕（純文字顯示，點擊才彈出修改視窗） ----------
+        function buildPlannedTimeButtonHTML(roundIndex, fieldName, value) {
+            const hasValue = value && value.trim() !== '';
+            const displayVal = hasValue ? value : '--:--';
+            
+            return `
+                <div class="flex items-center justify-center">
+                    <button type="button" onclick="openPlannedTimeModal(${roundIndex}, '${fieldName}')" data-html2canvas-ignore="false"
+                            class="group font-mono font-bold text-sm md:text-base ${hasValue ? 'text-slate-800 bg-slate-100/90 hover:bg-indigo-50 border-slate-300 hover:border-indigo-400' : 'text-slate-400 bg-slate-50 border-dashed border-slate-300 hover:bg-slate-100'} border px-2.5 py-1 rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
+                        <span>${displayVal}</span>
+                        <i class="fa-solid fa-pen text-[10px] ${hasValue ? 'text-indigo-500 opacity-60 group-hover:opacity-100' : 'text-slate-400'} transition-opacity" data-html2canvas-ignore="true"></i>
+                    </button>
+                </div>
+            `;
         }
 
         // ---------- 📱 手機優化版雙模態輸入框 ----------
@@ -988,11 +1283,12 @@
                 return;
             }
 
+            const subCode = document.getElementById('inputSubCode') ? document.getElementById('inputSubCode').value.trim() : '';
             const tournamentId = 'tm_' + Date.now();
             
             currentData = {
                 id: tournamentId,
-                config: { date, region, type, rounds, category, roundDuration: duration },
+                config: { date, region, type, rounds, category, roundDuration: duration, subCode: subCode },
                 roundsData: []
             };
 
@@ -1042,6 +1338,19 @@
             document.getElementById('displayRounds').innerText = conf.rounds;
             document.getElementById('badgeCategory').innerText = conf.category;
             document.getElementById('badgeType').innerText = conf.type;
+
+            const badgeSubCode = document.getElementById('badgeSubCode');
+            if (badgeSubCode) {
+                if (conf.subCode) {
+                    badgeSubCode.innerText = conf.subCode;
+                    badgeSubCode.classList.remove('hidden');
+                    badgeSubCode.style.display = '';
+                } else {
+                    badgeSubCode.innerText = '+ 補填賽季/場次';
+                    badgeSubCode.classList.remove('hidden');
+                    badgeSubCode.style.display = '';
+                }
+            }
 
             document.getElementById('thDurationDisplay').innerText = `(+${conf.roundDuration || 25}分)`;
 
@@ -1110,17 +1419,17 @@
                         R${row.roundNum}
                     </td>
                     <!-- 區塊 1：配對區 -->
-                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_announce', row.p_announce, false)}</td>
+                    <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_announce', row.p_announce)}</td>
                     <td class="py-2 px-0.5 bg-blue-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_announce', row.a_announce, true)}</td>
                     <td class="py-2 px-1 bg-blue-50/50">${formatDiffBadge(diffAnnounce)}</td>
 
                     <!-- 區塊 2：開賽區 -->
-                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_start', row.p_start, false)}</td>
+                    <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_start', row.p_start)}</td>
                     <td class="py-2 px-0.5 bg-emerald-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'a_start', row.a_start, true)}</td>
                     <td class="py-2 px-1 bg-emerald-50/50">${formatDiffBadge(diffStart)}</td>
 
                     <!-- 區塊 3：比賽與結束區 -->
-                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'p_round_end', row.p_round_end, false)}</td>
+                    <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildPlannedTimeButtonHTML(idx, 'p_round_end', row.p_round_end)}</td>
                     <td class="py-2 px-0.5 bg-purple-50/20 mobile-compact-padding">${buildTimeInputHTML(idx, 'all_clear', row.all_clear, true)}</td>
                     <td class="py-2 px-1 bg-purple-50/50">${formatDiffBadge(diffInRound)}</td>
 
@@ -1135,6 +1444,7 @@
 
                 tbody.appendChild(tr);
             });
+            renderTimelineChart();
         }
 
         function renderHistoryList() {
@@ -1155,6 +1465,7 @@
                         <div class="space-y-1 cursor-pointer flex-grow" onclick="loadTournament('${item.id}')">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white">${conf.type}</span>
+                                ${conf.subCode ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">${conf.subCode}</span>` : ''}
                                 <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">${conf.category}</span>
                             </div>
                             <h4 class="font-bold text-slate-800 text-sm md:text-base group-hover:text-indigo-600 transition-colors">${conf.region} 賽事</h4>
@@ -1318,5 +1629,656 @@
             return data.candidates[0].content.parts[0].text;
         }
     </script>
+
+    <!-- ⚙️ 預計排程彈窗 -->
+    <div id="autoSettingsModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6" data-html2canvas-ignore="true">
+        <div class="bg-white rounded-2xl max-w-lg w-full flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-base md:text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> 賽事預計排程設定
+                </h3>
+                <button onclick="closeAutoSettingsModal()" class="text-slate-400 hover:text-white text-xl px-2 py-1 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 md:p-6 space-y-4 overflow-y-auto max-h-[75vh] text-slate-700 text-xs md:text-sm">
+                <p class="text-slate-500 text-xs">設定標準間隔後，系統將自動計算並填入所有輪次的「預計公布配對」、「預計開賽」與「預計輪次結束」。個別項目仍可直接在表格中點擊修改。</p>
+                
+                <div class="space-y-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">1. 第一輪開賽時間 (預設)</label>
+                        <input type="text" id="autoR1Start" placeholder="10:30" maxlength="5"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">2. 配對公布到開賽間隔 (分鐘)</label>
+                        <input type="number" id="autoGapAnnounce" min="0" max="60" value="5"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <p class="text-[11px] text-slate-400 mt-0.5">例如：開賽前 5 分鐘公布配對</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">3. 比賽時間到到最後成績回報間隔 (分鐘)</label>
+                        <input type="number" id="autoGapEndToClear" min="0" max="60" value="5"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <p class="text-[11px] text-slate-400 mt-0.5">例如：比賽結束後 5 分鐘內收齊成績</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">4. 成績回報到下一輪配對公布間隔 (分鐘)</label>
+                        <input type="number" id="autoGapClearToNext" min="0" max="60" value="5"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-base font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                        <p class="text-[11px] text-slate-400 mt-0.5">例如：上一輪成績回報後，隔 5 分鐘公布下一輪配對</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 md:p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2.5 shrink-0">
+                <button onclick="closeAutoSettingsModal()" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                    取消
+                </button>
+                <button onclick="saveAndApplyAutoSchedule()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs md:text-sm transition-colors flex items-center gap-2 shadow-md">
+                    <i class="fa-solid fa-check"></i> 套用預計排程
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 自動化時間設定與計算邏輯 ---
+        function openAutoSettingsModal() {
+            if (!currentData.autoSettings) {
+                currentData.autoSettings = { r1StartTime: "10:00", gapAnnounceToStart: 10, gapEndToClear: 5, gapClearToNextAnnounce: 10 };
+            }
+            const s = currentData.autoSettings;
+            document.getElementById('autoR1Start').value = s.r1StartTime || "10:00";
+            document.getElementById('autoGapAnnounce').value = s.gapAnnounceToStart !== undefined ? s.gapAnnounceToStart : 10;
+            document.getElementById('autoGapEndToClear').value = s.gapEndToClear !== undefined ? s.gapEndToClear : 5;
+            document.getElementById('autoGapClearToNext').value = s.gapClearToNextAnnounce !== undefined ? s.gapClearToNextAnnounce : 10;
+            
+            document.getElementById('autoSettingsModal').classList.remove('hidden');
+        }
+
+        function closeAutoSettingsModal() {
+            document.getElementById('autoSettingsModal').classList.add('hidden');
+        }
+
+        function saveAndApplyAutoSchedule() {
+            const r1Start = document.getElementById('autoR1Start').value.trim() || "10:00";
+            const gapAnnounce = parseInt(document.getElementById('autoGapAnnounce').value, 10) || 10;
+            const gapEndToClear = parseInt(document.getElementById('autoGapEndToClear').value, 10) || 5;
+            const gapClearToNext = parseInt(document.getElementById('autoGapClearToNext').value, 10) || 10;
+
+            currentData.autoSettings = {
+                r1StartTime: r1Start,
+                gapAnnounceToStart: gapAnnounce,
+                gapEndToClear: gapEndToClear,
+                gapClearToNextAnnounce: gapClearToNext
+            };
+
+            const roundDur = parseInt(currentData.config.roundDuration || 25, 10);
+            let currentStartMin = parseToMinutes(r1Start);
+            if (currentStartMin === null) currentStartMin = 600; // 10:00
+
+            currentData.roundsData.forEach((row, idx) => {
+                // 1. 預計開賽
+                row.p_start = minutesToTimeStr(currentStartMin);
+                // 2. 預計公佈配對 (開賽前 gapAnnounce 分鐘)
+                row.p_announce = minutesToTimeStr(currentStartMin - gapAnnounce);
+                // 3. 預計輪次結束 (開賽 + 每輪時間)
+                const roundEndMin = currentStartMin + roundDur;
+                row.p_round_end = minutesToTimeStr(roundEndMin);
+
+                // 計算下一輪的開賽時間：
+                // 本輪結束時間 (roundEndMin) + gapEndToClear (成績回報時間) + gapClearToNext (到下一輪公布) + gapAnnounce (公布到下一輪開賽)
+                // 換言之：nextStart = roundEndMin + gapEndToClear + gapClearToNext + gapAnnounce
+                currentStartMin = roundEndMin + gapEndToClear + gapClearToNext + gapAnnounce;
+            });
+
+            saveCurrentData();
+            renderTable();
+            closeAutoSettingsModal();
+            showToast('已成功自動套用所有預計時間！');
+        }
+    </script>
+
+    <!-- ✏️ 個別預計時間修改微型彈窗 -->
+    <div id="plannedTimeModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6" data-html2canvas-ignore="true">
+        <div class="bg-white rounded-2xl max-w-sm w-full flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+            <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 id="plannedTimeModalTitle" class="font-bold text-sm md:text-base flex items-center gap-2">
+                    <i class="fa-solid fa-clock-pen text-indigo-400"></i> 修改預計時間
+                </h3>
+                <button onclick="closePlannedTimeModal()" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-4 text-slate-700">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">時間 (24小時制 HH:MM)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="plannedModalH" placeholder="時" maxlength="2" inputmode="numeric" pattern="[0-9]*"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2 text-center text-lg font-bold font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <span class="text-xl font-bold text-slate-400">:</span>
+                        <input type="text" id="plannedModalM" placeholder="分" maxlength="2" inputmode="numeric" pattern="[0-9]*"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2 text-center text-lg font-bold font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- 微調快捷按鈕 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">快捷微調</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button type="button" onclick="adjustPlannedModalTime(-10)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-bold transition-colors">-10分</button>
+                        <button type="button" onclick="adjustPlannedModalTime(-5)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-bold transition-colors">-5分</button>
+                        <button type="button" onclick="adjustPlannedModalTime(5)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-bold transition-colors">+5分</button>
+                        <button type="button" onclick="adjustPlannedModalTime(10)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-bold transition-colors">+10分</button>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center gap-2 shrink-0">
+                <button onclick="clearPlannedTimeModal()" class="px-3 py-2 text-rose-600 hover:bg-rose-50 font-bold rounded-xl text-xs transition-colors">
+                    清空時間
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closePlannedTimeModal()" class="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors">
+                        取消
+                    </button>
+                    <button onclick="savePlannedTimeModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm">
+                        儲存變更
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEditTarget = { roundIndex: null, fieldName: null };
+
+        function openPlannedTimeModal(roundIndex, fieldName) {
+            currentEditTarget = { roundIndex, fieldName };
+            const fieldLabels = {
+                'p_announce': '預計公布配對',
+                'p_start': '預計開賽',
+                'p_round_end': '預計輪次結束'
+            };
+            const labelName = fieldLabels[fieldName] || '預計時間';
+            document.getElementById('plannedTimeModalTitle').innerHTML = `<i class="fa-solid fa-clock-pen text-indigo-400"></i> 修改 R${roundIndex + 1} ${labelName}`;
+
+            const val = currentData.roundsData[roundIndex][fieldName] || '';
+            const [h, m] = val.includes(':') ? val.split(':') : ['', ''];
+            document.getElementById('plannedModalH').value = h;
+            document.getElementById('plannedModalM').value = m;
+
+            document.getElementById('plannedTimeModal').classList.remove('hidden');
+        }
+
+        function closePlannedTimeModal() {
+            document.getElementById('plannedTimeModal').classList.add('hidden');
+        }
+
+        function clearPlannedTimeModal() {
+            if (currentEditTarget.roundIndex !== null && currentEditTarget.fieldName) {
+                currentData.roundsData[currentEditTarget.roundIndex][currentEditTarget.fieldName] = '';
+                saveCurrentData();
+                renderTable();
+                closePlannedTimeModal();
+                showToast('已清除時間');
+            }
+        }
+
+        function adjustPlannedModalTime(deltaMinutes) {
+            let h = document.getElementById('plannedModalH').value.trim();
+            let m = document.getElementById('plannedModalM').value.trim();
+            if (!h && !m) return;
+            
+            let totalMin = (parseInt(h || 0, 10) * 60) + parseInt(m || 0, 10) + deltaMinutes;
+            totalMin = (totalMin % 1440 + 1440) % 1440;
+            
+            const newH = String(Math.floor(totalMin / 60)).padStart(2, '0');
+            const newM = String(totalMin % 60).padStart(2, '0');
+            document.getElementById('plannedModalH').value = newH;
+            document.getElementById('plannedModalM').value = newM;
+        }
+
+        function savePlannedTimeModal() {
+            if (currentEditTarget.roundIndex === null || !currentEditTarget.fieldName) return;
+
+            let h = document.getElementById('plannedModalH').value.trim();
+            let m = document.getElementById('plannedModalM').value.trim();
+
+            let newTimeStr = '';
+            if (h !== '' || m !== '') {
+                let numH = Math.min(23, Math.max(0, parseInt(h || '0', 10)));
+                let numM = Math.min(59, Math.max(0, parseInt(m || '0', 10)));
+                newTimeStr = `${String(numH).padStart(2, '0')}:${String(numM).padStart(2, '0')}`;
+
+                const check = checkPlannedSequenceValidation(currentEditTarget.roundIndex, currentEditTarget.fieldName, newTimeStr);
+                if (!check.valid) {
+                    showToast(check.msg, 'error');
+                    return;
+                }
+            }
+
+            currentData.roundsData[currentEditTarget.roundIndex][currentEditTarget.fieldName] = newTimeStr;
+            saveCurrentData();
+            renderTable();
+            closePlannedTimeModal();
+            showToast('已更新預計時間！');
+        }
+    </script>
+
+
+    <!-- 📈 圖表獨立全螢幕彈窗 -->
+    <div id="chartModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-3 md:p-6" data-html2canvas-ignore="true">
+        <div class="bg-white rounded-2xl max-w-4xl w-full flex flex-col shadow-2xl overflow-hidden border border-slate-200 max-h-[90vh]">
+            <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-sm md:text-base flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-indigo-400"></i> 賽事進度時間軸與效率分析 (全螢幕)
+                </h3>
+                <button onclick="closeChartModal()" class="text-slate-400 hover:text-white text-lg px-2 py-0.5 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow bg-slate-50 space-y-3">
+                <div class="relative w-full h-[380px] md:h-[500px] bg-white rounded-xl p-3 border border-slate-200 shadow-sm">
+                    <canvas id="modalTimelineChart"></canvas>
+                </div>
+            </div>
+            <div class="p-3 bg-white border-t border-slate-200 flex justify-end shrink-0">
+                <button onclick="closeChartModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs md:text-sm transition-colors">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+        // ---------- 📈 數據時間軸圖表與 KPI 繪製邏輯 ----------
+        let timelineChartInstance = null;
+        let modalTimelineChartInstance = null;
+
+        function toggleChartSection() {
+            const content = document.getElementById('chartBodyContent');
+            const icon = document.getElementById('iconToggleChart');
+            const text = document.getElementById('textToggleChart');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.remove('rotate-180');
+                text.innerText = '收合圖表';
+                renderTimelineChart();
+            } else {
+                content.classList.add('hidden');
+                icon.classList.add('rotate-180');
+                text.innerText = '展開圖表';
+            }
+        }
+
+        function openChartModal() {
+            document.getElementById('chartModal').classList.remove('hidden');
+            renderModalChart();
+        }
+
+        function closeChartModal() {
+            document.getElementById('chartModal').classList.add('hidden');
+        }
+
+        function renderTimelineChart() {
+            if (!currentData || !currentData.roundsData || currentData.roundsData.length === 0) return;
+
+            const rounds = currentData.roundsData;
+            const roundDuration = parseInt(currentData.config.roundDuration || 25, 10);
+            const labels = rounds.map(r => `R${r.roundNum}`);
+
+            let completedCount = 0;
+            let totalDelayMinutes = 0;
+            let delayCount = 0;
+
+            // 水平甘特圖浮動區間數據 [開始分鐘, 結束分鐘]
+            const seatData = [];      // 1. 入座
+            const matchData = [];     // 2. 比賽
+            const reportData = [];    // 3. 回報
+            const postData = [];      // 4. 輪後處理
+
+            let minTime = 1440;
+            let maxTime = 0;
+
+            rounds.forEach((r, i) => {
+                const pAnn = parseToMinutes(r.p_announce);
+                const pStart = parseToMinutes(r.p_start);
+                const pEnd = parseToMinutes(r.p_round_end);
+
+                const aAnn = parseToMinutes(r.a_announce);
+                const aStart = parseToMinutes(r.a_start);
+                const aClear = parseToMinutes(r.all_clear);
+
+                // 計算完成輪次與累積延遲
+                if (aStart !== null || aClear !== null) completedCount++;
+
+                if (pStart !== null && aStart !== null) {
+                    const diff = aStart - pStart;
+                    if (diff > 0) totalDelayMinutes += diff;
+                    delayCount++;
+                }
+
+                // 1. 入座階段
+                const startSeat = aAnn !== null ? aAnn : pAnn;
+                const endSeat = aStart !== null ? aStart : pStart;
+                if (startSeat !== null && endSeat !== null && endSeat >= startSeat) {
+                    seatData.push([startSeat, endSeat]);
+                    minTime = Math.min(minTime, startSeat);
+                    maxTime = Math.max(maxTime, endSeat);
+                } else {
+                    seatData.push(null);
+                }
+
+                // 2. 比賽階段
+                const startMatch = aStart !== null ? aStart : pStart;
+                if (startMatch !== null) {
+                    const endMatch = startMatch + roundDuration;
+                    matchData.push([startMatch, endMatch]);
+                    minTime = Math.min(minTime, startMatch);
+                    maxTime = Math.max(maxTime, endMatch);
+
+                    // 3. 回報階段
+                    if (aClear !== null) {
+                        if (aClear >= endMatch) {
+                            reportData.push([endMatch, aClear]);
+                            maxTime = Math.max(maxTime, aClear);
+                        } else {
+                            reportData.push([aClear, endMatch]);
+                        }
+                    } else if (pEnd !== null && pEnd >= endMatch) {
+                        reportData.push([endMatch, pEnd]);
+                        maxTime = Math.max(maxTime, pEnd);
+                    } else {
+                        reportData.push(null);
+                    }
+
+                    // 4. 輪後處理階段
+                    if (i < rounds.length - 1) {
+                        const nextR = rounds[i + 1];
+                        const nextAnn = parseToMinutes(nextR.a_announce) || parseToMinutes(nextR.p_announce);
+                        const currClear = aClear || endMatch;
+                        if (currClear !== null && nextAnn !== null && nextAnn >= currClear) {
+                            postData.push([currClear, nextAnn]);
+                            maxTime = Math.max(maxTime, nextAnn);
+                        } else {
+                            postData.push(null);
+                        }
+                    } else {
+                        postData.push(null);
+                    }
+                } else {
+                    matchData.push(null);
+                    reportData.push(null);
+                    postData.push(null);
+                }
+            });
+
+            // 更新 KPI 卡片
+            const totalRounds = rounds.length;
+            const pct = Math.round((completedCount / totalRounds) * 100);
+            document.getElementById('kpiProgress').innerText = `${completedCount} / ${totalRounds}`;
+            document.getElementById('kpiProgressPct').innerText = `(${pct}%)`;
+
+            const kpiStartDelay = document.getElementById('kpiStartDelay');
+            if (totalDelayMinutes > 0) {
+                kpiStartDelay.innerHTML = `<span class="text-rose-600">+${totalDelayMinutes} <span class="text-xs text-slate-500">分</span></span>`;
+            } else if (delayCount > 0) {
+                kpiStartDelay.innerHTML = `<span class="text-emerald-600">0 <span class="text-xs text-slate-500">分 (準時)</span></span>`;
+            } else {
+                kpiStartDelay.innerHTML = `<span class="text-slate-400">--</span>`;
+            }
+
+            const kpiAvgDelay = document.getElementById('kpiAvgDelay');
+            if (delayCount > 0) {
+                const avg = (totalDelayMinutes / delayCount).toFixed(1);
+                kpiAvgDelay.innerHTML = `${avg} <span class="text-xs text-slate-500">分/輪</span>`;
+            } else {
+                kpiAvgDelay.innerText = '--';
+            }
+
+            const kpiBadge = document.getElementById('kpiEfficiencyBadge');
+            if (delayCount === 0) {
+                kpiBadge.innerHTML = `<span class="text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">尚無實際數據</span>`;
+            } else if (totalDelayMinutes === 0) {
+                kpiBadge.innerHTML = `<span class="text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200">極佳 🚀 (零延誤)</span>`;
+            } else if (totalDelayMinutes <= 10) {
+                kpiBadge.innerHTML = `<span class="text-blue-700 bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200">良好 🟢 (微幅影響)</span>`;
+            } else if (totalDelayMinutes <= 25) {
+                kpiBadge.innerHTML = `<span class="text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200">輕微延遲 🟡</span>`;
+            } else {
+                kpiBadge.innerHTML = `<span class="text-rose-700 bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-200">嚴重延誤 🔴</span>`;
+            }
+
+            // 動態調整 X 軸邊界
+            if (minTime === 1440) minTime = 600; // 預設 10:00
+            if (maxTime === 0) maxTime = minTime + (totalRounds * 45);
+            minTime = Math.floor((minTime - 10) / 15) * 15;
+            maxTime = Math.ceil((maxTime + 15) / 15) * 15;
+
+            const canvas = document.getElementById('timelineChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (timelineChartInstance) {
+                timelineChartInstance.destroy();
+            }
+
+            timelineChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '入座',
+                            data: seatData,
+                            backgroundColor: '#0d9488', // Teal-600
+                            borderColor: '#0f766e',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.65
+                        },
+                        {
+                            label: '比賽',
+                            data: matchData,
+                            backgroundColor: '#1e3a8a', // Dark Indigo/Blue (如同圖片)
+                            borderColor: '#1e40af',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.65
+                        },
+                        {
+                            label: '回報',
+                            data: reportData,
+                            backgroundColor: '#c2410c', // Orange/Brown (如同圖片)
+                            borderColor: '#9a3412',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.65
+                        },
+                        {
+                            label: '輪後處理',
+                            data: postData,
+                            backgroundColor: '#64748b', // Slate Gray
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            barPercentage: 0.65
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 14, font: { size: 12, weight: 'bold' } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const raw = context.raw;
+                                    if (!raw || !Array.isArray(raw)) return `${context.dataset.label}: --`;
+                                    const startStr = minutesToTimeStr(raw[0]);
+                                    const endStr = minutesToTimeStr(raw[1]);
+                                    const duration = raw[1] - raw[0];
+                                    return `${context.dataset.label}: ${startStr} ~ ${endStr} (${duration} 分鐘)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: minTime,
+                            max: maxTime,
+                            title: { display: true, text: '時間 (HH:MM)', font: { size: 11, weight: 'bold' } },
+                            ticks: {
+                                stepSize: 30,
+                                callback: function(value) { return minutesToTimeStr(value); }
+                            }
+                        },
+                        y: {
+                            stacked: false,
+                            grid: { display: false },
+                            ticks: { font: { size: 13, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderModalChart() {
+            const canvas = document.getElementById('modalTimelineChart');
+            if (!canvas || !currentData || !currentData.roundsData) return;
+            const ctx = canvas.getContext('2d');
+
+            if (modalTimelineChartInstance) {
+                modalTimelineChartInstance.destroy();
+            }
+
+            const rounds = currentData.roundsData;
+            const roundDuration = parseInt(currentData.config.roundDuration || 25, 10);
+            const labels = rounds.map(r => `R${r.roundNum}`);
+
+            const seatData = [];
+            const matchData = [];
+            const reportData = [];
+            const postData = [];
+
+            let minTime = 1440;
+            let maxTime = 0;
+
+            rounds.forEach((r, i) => {
+                const pAnn = parseToMinutes(r.p_announce);
+                const pStart = parseToMinutes(r.p_start);
+                const pEnd = parseToMinutes(r.p_round_end);
+
+                const aAnn = parseToMinutes(r.a_announce);
+                const aStart = parseToMinutes(r.a_start);
+                const aClear = parseToMinutes(r.all_clear);
+
+                const startSeat = aAnn !== null ? aAnn : pAnn;
+                const endSeat = aStart !== null ? aStart : pStart;
+                if (startSeat !== null && endSeat !== null && endSeat >= startSeat) {
+                    seatData.push([startSeat, endSeat]);
+                    minTime = Math.min(minTime, startSeat);
+                    maxTime = Math.max(maxTime, endSeat);
+                } else {
+                    seatData.push(null);
+                }
+
+                const startMatch = aStart !== null ? aStart : pStart;
+                if (startMatch !== null) {
+                    const endMatch = startMatch + roundDuration;
+                    matchData.push([startMatch, endMatch]);
+                    minTime = Math.min(minTime, startMatch);
+                    maxTime = Math.max(maxTime, endMatch);
+
+                    if (aClear !== null) {
+                        if (aClear >= endMatch) {
+                            reportData.push([endMatch, aClear]);
+                            maxTime = Math.max(maxTime, aClear);
+                        } else {
+                            reportData.push([aClear, endMatch]);
+                        }
+                    } else if (pEnd !== null && pEnd >= endMatch) {
+                        reportData.push([endMatch, pEnd]);
+                        maxTime = Math.max(maxTime, pEnd);
+                    } else {
+                        reportData.push(null);
+                    }
+
+                    if (i < rounds.length - 1) {
+                        const nextR = rounds[i + 1];
+                        const nextAnn = parseToMinutes(nextR.a_announce) || parseToMinutes(nextR.p_announce);
+                        const currClear = aClear || endMatch;
+                        if (currClear !== null && nextAnn !== null && nextAnn >= currClear) {
+                            postData.push([currClear, nextAnn]);
+                            maxTime = Math.max(maxTime, nextAnn);
+                        } else {
+                            postData.push(null);
+                        }
+                    } else {
+                        postData.push(null);
+                    }
+                } else {
+                    matchData.push(null);
+                    reportData.push(null);
+                    postData.push(null);
+                }
+            });
+
+            if (minTime === 1440) minTime = 600;
+            if (maxTime === 0) maxTime = minTime + (rounds.length * 45);
+            minTime = Math.floor((minTime - 10) / 15) * 15;
+            maxTime = Math.ceil((maxTime + 15) / 15) * 15;
+
+            modalTimelineChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '入座', data: seatData, backgroundColor: '#0d9488', borderColor: '#0f766e', borderWidth: 1, borderRadius: 4, barPercentage: 0.65 },
+                        { label: '比賽', data: matchData, backgroundColor: '#1e3a8a', borderColor: '#1e40af', borderWidth: 1, borderRadius: 4, barPercentage: 0.65 },
+                        { label: '回報', data: reportData, backgroundColor: '#c2410c', borderColor: '#9a3412', borderWidth: 1, borderRadius: 4, barPercentage: 0.65 },
+                        { label: '輪後處理', data: postData, backgroundColor: '#64748b', borderColor: '#475569', borderWidth: 1, borderRadius: 4, barPercentage: 0.65 }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 13, weight: 'bold' } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const raw = context.raw;
+                                    if (!raw || !Array.isArray(raw)) return `${context.dataset.label}: --`;
+                                    const startStr = minutesToTimeStr(raw[0]);
+                                    const endStr = minutesToTimeStr(raw[1]);
+                                    const duration = raw[1] - raw[0];
+                                    return `${context.dataset.label}: ${startStr} ~ ${endStr} (${duration} 分鐘)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear', min: minTime, max: maxTime,
+                            title: { display: true, text: '時間 (HH:MM)', font: { size: 12, weight: 'bold' } },
+                            ticks: { stepSize: 30, callback: function(value) { return minutesToTimeStr(value); } }
+                        },
+                        y: { stacked: false, grid: { display: false }, ticks: { font: { size: 13, weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+
+</script>
 </body>
 </html>
